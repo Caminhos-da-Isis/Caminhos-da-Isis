@@ -1,4 +1,7 @@
-import { useEffect, useState } from 'react';
+import {
+  useEffect,
+  useState,
+} from 'react';
 
 export type CartItem = {
   id: number;
@@ -8,31 +11,48 @@ export type CartItem = {
   quantidade: number;
 };
 
-const STORAGE_KEY = 'islp-tarot-cart';
+const STORAGE_KEY =
+  'islp-tarot-cart';
 
 function readCart(): CartItem[] {
   try {
-    const saved = localStorage.getItem(STORAGE_KEY);
+    const saved =
+      localStorage.getItem(
+        STORAGE_KEY
+      );
 
     if (!saved) {
       return [];
     }
 
-    const parsed = JSON.parse(saved);
+    const parsed =
+      JSON.parse(saved);
 
-    return Array.isArray(parsed) ? parsed : [];
+    return Array.isArray(
+      parsed
+    )
+      ? parsed
+      : [];
   } catch {
     return [];
   }
 }
 
-function saveCart(items: CartItem[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+function saveCart(
+  items: CartItem[]
+) {
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify(items)
+  );
 
   window.dispatchEvent(
-    new CustomEvent('cart-updated', {
-      detail: items,
-    })
+    new CustomEvent(
+      'cart-updated',
+      {
+        detail: items,
+      }
+    )
   );
 }
 
@@ -41,28 +61,42 @@ export function getCart(): CartItem[] {
 }
 
 export function addToCart(
-  item: Omit<CartItem, 'quantidade'>
+  item: Omit<
+    CartItem,
+    'quantidade'
+  >
 ) {
-  const current = readCart();
+  const current =
+    readCart();
 
-  const existing = current.find(
-    (cartItem) => cartItem.id === item.id
-  );
+  const existing =
+    current.find(
+      (cartItem) =>
+        cartItem.id ===
+        item.id
+    );
 
   let updated: CartItem[];
 
   if (existing) {
-    updated = current.map((cartItem) =>
-      cartItem.id === item.id
-        ? {
-            ...cartItem,
-            quantidade: cartItem.quantidade + 1,
-          }
-        : cartItem
-    );
+    updated =
+      current.map(
+        (cartItem) =>
+          cartItem.id ===
+          item.id
+            ? {
+                ...cartItem,
+
+                quantidade:
+                  cartItem.quantidade +
+                  1,
+              }
+            : cartItem
+      );
   } else {
     updated = [
       ...current,
+
       {
         ...item,
         quantidade: 1,
@@ -73,42 +107,67 @@ export function addToCart(
   saveCart(updated);
 }
 
-export function removeFromCart(id: number) {
-  const current = readCart();
+export function removeFromCart(
+  id: number
+) {
+  const current =
+    readCart();
 
   saveCart(
-    current.filter((item) => item.id !== id)
-  );
-}
-
-export function increaseCartItem(id: number) {
-  const current = readCart();
-
-  saveCart(
-    current.map((item) =>
-      item.id === id
-        ? {
-            ...item,
-            quantidade: item.quantidade + 1,
-          }
-        : item
+    current.filter(
+      (item) =>
+        item.id !== id
     )
   );
 }
 
-export function decreaseCartItem(id: number) {
-  const current = readCart();
+export function increaseCartItem(
+  id: number
+) {
+  const current =
+    readCart();
 
-  const updated = current
-    .map((item) =>
-      item.id === id
-        ? {
-            ...item,
-            quantidade: item.quantidade - 1,
-          }
-        : item
+  saveCart(
+    current.map(
+      (item) =>
+        item.id === id
+          ? {
+              ...item,
+
+              quantidade:
+                item.quantidade +
+                1,
+            }
+          : item
     )
-    .filter((item) => item.quantidade > 0);
+  );
+}
+
+export function decreaseCartItem(
+  id: number
+) {
+  const current =
+    readCart();
+
+  const updated =
+    current
+      .map(
+        (item) =>
+          item.id === id
+            ? {
+                ...item,
+
+                quantidade:
+                  item.quantidade -
+                  1,
+              }
+            : item
+      )
+      .filter(
+        (item) =>
+          item.quantidade >
+          0
+      );
 
   saveCart(updated);
 }
@@ -118,13 +177,18 @@ export function clearCart() {
 }
 
 export function useCart() {
-  const [items, setItems] = useState<CartItem[]>(
-    () => readCart()
-  );
+  const [
+    items,
+    setItems,
+  ] = useState<
+    CartItem[]
+  >(() => readCart());
 
   useEffect(() => {
     function updateCart() {
-      setItems(readCart());
+      setItems(
+        readCart()
+      );
     }
 
     window.addEventListener(
@@ -150,16 +214,28 @@ export function useCart() {
     };
   }, []);
 
-  const quantidadeTotal = items.reduce(
-    (total, item) => total + item.quantidade,
-    0
-  );
+  const quantidadeTotal =
+    items.reduce(
+      (
+        total,
+        item
+      ) =>
+        total +
+        item.quantidade,
+      0
+    );
 
-  const valorTotal = items.reduce(
-    (total, item) =>
-      total + item.preco * item.quantidade,
-    0
-  );
+  const valorTotal =
+    items.reduce(
+      (
+        total,
+        item
+      ) =>
+        total +
+        item.preco *
+          item.quantidade,
+      0
+    );
 
   return {
     items,
