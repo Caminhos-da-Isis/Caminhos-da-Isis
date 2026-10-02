@@ -54,6 +54,10 @@ type DatabaseService = {
     | ServiceArea
     | null;
 
+  imagem_url:
+    | string
+    | null;
+
   ativo: boolean;
   destaque: boolean;
   ordem: number;
@@ -153,7 +157,7 @@ export function Tiragens() {
     } = await supabase
       .from('services')
       .select(
-        'id, nome, preco, descricao, categoria, area, ativo, destaque, ordem'
+        'id, nome, preco, descricao, categoria, area, imagem_url, ativo, destaque, ordem'
       )
       .eq(
         'categoria',
@@ -270,6 +274,7 @@ export function Tiragens() {
         </p>
       </div>
 
+      {/* FILTROS */}
       <div className="relative -mx-5 mt-7">
         <div className="flex gap-2 overflow-x-auto px-5 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {filters.map(
@@ -305,6 +310,7 @@ export function Tiragens() {
         </div>
       </div>
 
+      {/* CARREGANDO */}
       {loading && (
         <div className="flex justify-center py-14">
           <Loader2
@@ -314,6 +320,7 @@ export function Tiragens() {
         </div>
       )}
 
+      {/* VAZIO */}
       {!loading &&
         filteredTiragens.length ===
           0 && (
@@ -330,6 +337,7 @@ export function Tiragens() {
           </div>
         )}
 
+      {/* CARDS */}
       {!loading &&
         filteredTiragens.length >
           0 && (
@@ -406,12 +414,23 @@ function TiragemCard({
     setAdded,
   ] = useState(false);
 
+  const [
+    imageError,
+    setImageError,
+  ] = useState(false);
+
   const area =
     databaseService.area ??
     'geral';
 
   const AreaIcon =
     getAreaIcon(area);
+
+  const hasImage =
+    Boolean(
+      databaseService.imagem_url
+    ) &&
+    !imageError;
 
   function handleAddToCart() {
     addToCart({
@@ -453,36 +472,77 @@ function TiragemCard({
           `${delay}s`,
       }}
     >
+
+      {/* ==========================================
+          IMAGEM DA TIRAGEM
+      ========================================== */}
+
       <div className="relative h-[112px] overflow-hidden border-b border-dourado-200/10 bg-bordo-300/60">
-        <div className="absolute -right-10 -top-12 h-32 w-32 rounded-full border border-dourado-200/10" />
 
-        <div className="absolute -bottom-14 -left-8 h-32 w-32 rounded-full border border-dourado-200/10" />
-
-        <div className="absolute inset-0 bg-gradient-to-br from-dourado-200/[0.08] via-transparent to-bordo-400/40" />
-
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="relative flex h-14 w-14 items-center justify-center rounded-full border border-dourado-200/30 bg-bordo-300/70 shadow-[0_0_28px_rgba(212,175,55,0.10)]">
-            <div className="absolute inset-[5px] rounded-full border border-dourado-200/10" />
-
-            <AreaIcon
-              className="h-6 w-6 text-dourado-200/85"
-              strokeWidth={1.25}
+        {hasImage ? (
+          <>
+            <img
+              src={
+                databaseService.imagem_url!
+              }
+              alt={
+                databaseService.nome
+              }
+              loading="lazy"
+              onError={() =>
+                setImageError(true)
+              }
+              className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
             />
-          </div>
-        </div>
 
-        <span className="absolute left-2.5 top-2.5 rounded-full border border-dourado-200/20 bg-bordo-300/75 px-2 py-1 font-serif text-[8px] uppercase tracking-[0.12em] text-dourado-200/70 backdrop-blur-sm">
+            {/* SOMBRA PARA DAR CONTRASTE */}
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-bordo-400/55 via-transparent to-black/10" />
+
+            {/* LEVE VINHETA */}
+            <div className="pointer-events-none absolute inset-0 shadow-[inset_0_0_25px_rgba(0,0,0,0.18)]" />
+          </>
+        ) : (
+          <>
+            {/* FALLBACK ANTIGO */}
+            <div className="absolute -right-10 -top-12 h-32 w-32 rounded-full border border-dourado-200/10" />
+
+            <div className="absolute -bottom-14 -left-8 h-32 w-32 rounded-full border border-dourado-200/10" />
+
+            <div className="absolute inset-0 bg-gradient-to-br from-dourado-200/[0.08] via-transparent to-bordo-400/40" />
+
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="relative flex h-14 w-14 items-center justify-center rounded-full border border-dourado-200/30 bg-bordo-300/70 shadow-[0_0_28px_rgba(212,175,55,0.10)]">
+
+                <div className="absolute inset-[5px] rounded-full border border-dourado-200/10" />
+
+                <AreaIcon
+                  className="h-6 w-6 text-dourado-200/85"
+                  strokeWidth={1.25}
+                />
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* CATEGORIA */}
+        <span className="absolute left-2.5 top-2.5 z-10 rounded-full border border-dourado-200/25 bg-bordo-400/80 px-2 py-1 font-serif text-[8px] uppercase tracking-[0.12em] text-dourado-200 backdrop-blur-sm shadow-[0_2px_10px_rgba(0,0,0,0.25)]">
           {formatArea(area)}
         </span>
 
+        {/* DESTAQUE */}
         {databaseService.destaque && (
-          <span className="absolute right-2.5 top-2.5 text-[11px] text-dourado-200/80">
+          <span className="absolute right-2.5 top-2.5 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-dourado-200/25 bg-bordo-400/80 text-[11px] text-dourado-200 backdrop-blur-sm shadow-[0_2px_10px_rgba(0,0,0,0.25)]">
             ✦
           </span>
         )}
       </div>
 
+      {/* ==========================================
+          CONTEÚDO DO CARD
+      ========================================== */}
+
       <div className="flex flex-1 flex-col p-3.5">
+
         <h3 className="min-h-[42px] font-serif text-[16px] font-medium leading-[1.28] text-creme">
           {service.name}
         </h3>
@@ -493,12 +553,14 @@ function TiragemCard({
           }
         </p>
 
+        {/* PREÇO */}
         <div className="mt-3 border-t border-dourado-200/10 pt-3">
           <span className="font-serif text-xl font-semibold text-gradient-gold">
             {service.price}
           </span>
         </div>
 
+        {/* DETALHES */}
         <button
           type="button"
           onClick={onDetails}
@@ -512,6 +574,7 @@ function TiragemCard({
           Ver detalhes
         </button>
 
+        {/* CARRINHO */}
         <button
           type="button"
           onClick={
@@ -544,6 +607,7 @@ function TiragemCard({
           )}
         </button>
 
+        {/* WHATSAPP */}
         <a
           href={buildWhatsAppLink(
             service.name,
@@ -597,12 +661,17 @@ function formatArea(
     string
   > = {
     geral: 'Geral',
+
     amor: 'Amor',
+
     financeiro:
       'Financeiro',
+
     pessoal: 'Pessoal',
+
     espiritual:
       'Espiritual',
+
     relacionamentos:
       'Relacionamentos',
   };
