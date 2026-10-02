@@ -28,12 +28,21 @@ type Review = {
   created_at: string;
 };
 
+type ServiceArea =
+  | 'geral'
+  | 'amor'
+  | 'financeiro'
+  | 'pessoal'
+  | 'espiritual'
+  | 'relacionamentos';
+
 type Service = {
   id: number;
   nome: string;
   preco: number;
   descricao: string;
   categoria: 'consulta' | 'tiragem';
+  area: ServiceArea;
   ativo: boolean;
   destaque: boolean;
   ordem: number;
@@ -45,6 +54,7 @@ type ServiceForm = {
   preco: string;
   descricao: string;
   categoria: 'consulta' | 'tiragem';
+  area: ServiceArea;
   ativo: boolean;
   destaque: boolean;
   ordem: string;
@@ -122,6 +132,7 @@ const emptyServiceForm: ServiceForm = {
   preco: '',
   descricao: '',
   categoria: 'tiragem',
+  area: 'geral',
   ativo: true,
   destaque: false,
   ordem: '1',
@@ -243,7 +254,7 @@ export function AdminPanel() {
     const { data, error } = await supabase
       .from('services')
       .select(
-        'id, nome, preco, descricao, categoria, ativo, destaque, ordem, created_at'
+        'id, nome, preco, descricao, categoria, area, ativo, destaque, ordem, created_at'
       )
       .order('categoria', { ascending: true })
       .order('ordem', { ascending: true });
@@ -799,6 +810,7 @@ export function AdminPanel() {
       preco: String(service.preco),
       descricao: service.descricao,
       categoria: service.categoria,
+      area: service.area ?? 'geral',
       ativo: service.ativo,
       destaque: service.destaque,
       ordem: String(service.ordem),
@@ -868,6 +880,10 @@ export function AdminPanel() {
       preco,
       descricao,
       categoria: serviceForm.categoria,
+      area:
+        serviceForm.categoria === 'tiragem'
+          ? serviceForm.area
+          : 'geral',
       ativo: serviceForm.ativo,
       destaque: serviceForm.destaque,
       ordem,
@@ -1506,6 +1522,13 @@ export function AdminPanel() {
                                       ? 'Consulta'
                                       : 'Tiragem'}
                                   </span>
+
+                                  {service.categoria ===
+                                    'tiragem' && (
+                                    <span className="font-serif text-[9px] text-creme/35 uppercase">
+                                      • {formatServiceArea(service.area)}
+                                    </span>
+                                  )}
 
                                   {!service.ativo && (
                                     <span className="font-serif text-[9px] text-creme/30 uppercase">
@@ -2520,6 +2543,11 @@ export function AdminPanel() {
                           event.target.value as
                             | 'consulta'
                             | 'tiragem',
+                        area:
+                          event.target.value ===
+                          'consulta'
+                            ? 'geral'
+                            : serviceForm.area,
                       })
                     }
                     className="AdminInput"
@@ -2533,6 +2561,42 @@ export function AdminPanel() {
                     </option>
                   </select>
                 </FieldLabel>
+
+                {/* ÁREA DA TIRAGEM */}
+                {serviceForm.categoria === 'tiragem' && (
+                  <FieldLabel label="Área da tiragem">
+                    <select
+                      value={serviceForm.area}
+                      onChange={(event) =>
+                        setServiceForm({
+                          ...serviceForm,
+                          area:
+                            event.target.value as ServiceArea,
+                        })
+                      }
+                      className="AdminInput"
+                    >
+                      <option value="geral">
+                        Geral
+                      </option>
+                      <option value="amor">
+                        Amor
+                      </option>
+                      <option value="financeiro">
+                        Financeiro
+                      </option>
+                      <option value="pessoal">
+                        Pessoal
+                      </option>
+                      <option value="espiritual">
+                        Espiritual
+                      </option>
+                      <option value="relacionamentos">
+                        Relacionamentos
+                      </option>
+                    </select>
+                  </FieldLabel>
+                )}
 
                 {/* DESCRIÇÃO */}
                 <FieldLabel label="Descrição">
@@ -2617,6 +2681,21 @@ export function AdminPanel() {
 /* =========================================================
    COMPONENTES AUXILIARES
 ========================================================= */
+
+function formatServiceArea(
+  area: ServiceArea
+) {
+  const labels: Record<ServiceArea, string> = {
+    geral: 'Geral',
+    amor: 'Amor',
+    financeiro: 'Financeiro',
+    pessoal: 'Pessoal',
+    espiritual: 'Espiritual',
+    relacionamentos: 'Relacionamentos',
+  };
+
+  return labels[area] ?? 'Geral';
+}
 
 function getWeekdayName(
   dayOfWeek: number
