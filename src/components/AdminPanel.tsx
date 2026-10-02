@@ -2576,24 +2576,47 @@ export function AdminPanel() {
                       }
                       className="AdminInput"
                     >
-                      <option value="geral">
-                        Geral
-                      </option>
-                      <option value="amor">
-                        Amor
-                      </option>
-                      <option value="financeiro">
-                        Financeiro
-                      </option>
-                      <option value="pessoal">
-                        Pessoal
-                      </option>
-                      <option value="espiritual">
-                        Espiritual
-                      </option>
-                      <option value="relacionamentos">
-                        Relacionamentos
-                      </option>
+                     <option
+  value="geral"
+  className="bg-bordo-300 text-creme"
+>
+  Geral
+</option>
+
+<option
+  value="amor"
+  className="bg-bordo-300 text-creme"
+>
+  Amor
+</option>
+
+<option
+  value="financeiro"
+  className="bg-bordo-300 text-creme"
+>
+  Financeiro
+</option>
+
+<option
+  value="pessoal"
+  className="bg-bordo-300 text-creme"
+>
+  Pessoal
+</option>
+
+<option
+  value="espiritual"
+  className="bg-bordo-300 text-creme"
+>
+  Espiritual
+</option>
+
+<option
+  value="relacionamentos"
+  className="bg-bordo-300 text-creme"
+>
+  Relacionamentos
+</option>
                     </select>
                   </FieldLabel>
                 )}
