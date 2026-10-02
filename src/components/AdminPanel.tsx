@@ -2553,10 +2553,14 @@ export function AdminPanel() {
                     className="AdminInput"
                   >
                     <option value="tiragem">
+                      className="bg-bordo-300 text-creme"
+                      >
                       Tiragem
                     </option>
 
                     <option value="consulta">
+                       className="bg-bordo-300 text-creme"
+                      >
                       Consulta
                     </option>
                   </select>
