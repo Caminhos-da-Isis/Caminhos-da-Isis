@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import {
   CalendarDays,
   Check,
@@ -19,6 +19,14 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
+type ServiceArea =
+  | 'geral'
+  | 'amor'
+  | 'financeiro'
+  | 'pessoal'
+  | 'espiritual'
+  | 'relacionamentos';
+
 type Review = {
   id: number;
   estrelas: number;
@@ -28,21 +36,13 @@ type Review = {
   created_at: string;
 };
 
-type ServiceArea =
-  | 'geral'
-  | 'amor'
-  | 'financeiro'
-  | 'pessoal'
-  | 'espiritual'
-  | 'relacionamentos';
-
 type Service = {
   id: number;
   nome: string;
   preco: number;
   descricao: string;
   categoria: 'consulta' | 'tiragem';
-  area: ServiceArea;
+  area: ServiceArea | null;
   ativo: boolean;
   destaque: boolean;
   ordem: number;
@@ -60,8 +60,16 @@ type ServiceForm = {
   ordem: string;
 };
 
-type Filter = 'pendente' | 'aprovada' | 'rejeitada';
-type AdminTab = 'avaliacoes' | 'jogos' | 'pedidos' | 'agenda';
+type Filter =
+  | 'pendente'
+  | 'aprovada'
+  | 'rejeitada';
+
+type AdminTab =
+  | 'avaliacoes'
+  | 'jogos'
+  | 'pedidos'
+  | 'agenda';
 
 type AvailabilityDay = {
   id: number;
@@ -138,110 +146,207 @@ const emptyServiceForm: ServiceForm = {
   ordem: '1',
 };
 
+const areaOptions: Array<{
+  value: ServiceArea;
+  label: string;
+}> = [
+  { value: 'geral', label: 'Geral' },
+  { value: 'amor', label: 'Amor' },
+  {
+    value: 'financeiro',
+    label: 'Financeiro',
+  },
+  { value: 'pessoal', label: 'Pessoal' },
+  {
+    value: 'espiritual',
+    label: 'Espiritual',
+  },
+  {
+    value: 'relacionamentos',
+    label: 'Relacionamentos',
+  },
+];
+
 export function AdminPanel() {
   const [open, setOpen] = useState(false);
-  const [tab, setTab] = useState<AdminTab>('avaliacoes');
 
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [filter, setFilter] = useState<Filter>('pendente');
+  const [tab, setTab] =
+    useState<AdminTab>('avaliacoes');
 
-  const [services, setServices] = useState<Service[]>([]);
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [agendaDate, setAgendaDate] = useState(
-    getTodayInSaoPaulo()
-  );
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [availabilityDays, setAvailabilityDays] = useState<AvailabilityDay[]>([]);
-  const [showAvailabilitySettings, setShowAvailabilitySettings] = useState(false);
-  const [savingAvailabilityDay, setSavingAvailabilityDay] = useState<number | null>(null);
-  const [scheduleBlocks, setScheduleBlocks] = useState<ScheduleBlock[]>([]);
-  const [agendaStartTime, setAgendaStartTime] = useState('10:00');
-  const [agendaEndTime, setAgendaEndTime] = useState('10:30');
-  const [agendaReason, setAgendaReason] = useState('');
-  const [savingBlock, setSavingBlock] = useState(false);
+  const [filter, setFilter] =
+    useState<Filter>('pendente');
 
-  const [loading, setLoading] = useState(false);
-  const [actionId, setActionId] = useState<number | null>(null);
+  const [reviews, setReviews] = useState<
+    Review[]
+  >([]);
+
+  const [services, setServices] = useState<
+    Service[]
+  >([]);
+
+  const [orders, setOrders] = useState<
+    Order[]
+  >([]);
+
+  const [appointments, setAppointments] =
+    useState<Appointment[]>([]);
+
+  const [
+    scheduleBlocks,
+    setScheduleBlocks,
+  ] = useState<ScheduleBlock[]>([]);
+
+  const [
+    availabilityDays,
+    setAvailabilityDays,
+  ] = useState<AvailabilityDay[]>([]);
+
+  const [agendaDate, setAgendaDate] =
+    useState(getTodayInSaoPaulo());
+
+  const [
+    agendaStartTime,
+    setAgendaStartTime,
+  ] = useState('10:00');
+
+  const [
+    agendaEndTime,
+    setAgendaEndTime,
+  ] = useState('10:30');
+
+  const [
+    agendaReason,
+    setAgendaReason,
+  ] = useState('');
+
+  const [
+    showAvailabilitySettings,
+    setShowAvailabilitySettings,
+  ] = useState(false);
+
+  const [
+    savingAvailabilityDay,
+    setSavingAvailabilityDay,
+  ] = useState<number | null>(null);
+
+  const [savingBlock, setSavingBlock] =
+    useState(false);
+
+  const [loading, setLoading] =
+    useState(false);
+
+  const [actionId, setActionId] =
+    useState<number | null>(null);
+
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  const [serviceModalOpen, setServiceModalOpen] =
-    useState(false);
+  const [
+    serviceModalOpen,
+    setServiceModalOpen,
+  ] = useState(false);
 
-  const [editingService, setEditingService] =
-    useState<Service | null>(null);
+  const [
+    editingService,
+    setEditingService,
+  ] = useState<Service | null>(null);
 
   const [serviceForm, setServiceForm] =
-    useState<ServiceForm>(emptyServiceForm);
+    useState<ServiceForm>(
+      emptyServiceForm
+    );
 
-  const [savingService, setSavingService] =
-    useState(false);
+  const [
+    savingService,
+    setSavingService,
+  ] = useState(false);
 
   useEffect(() => {
-    function handleOpen() {
-      setOpen(true);
-    }
+    const handleOpen = () => setOpen(true);
 
     document.addEventListener(
       'open-admin-panel',
       handleOpen
     );
 
-    return () => {
+    return () =>
       document.removeEventListener(
         'open-admin-panel',
         handleOpen
       );
-    };
   }, []);
 
   useEffect(() => {
-    if (!open) return;
-
-    if (tab === 'avaliacoes') {
-      loadReviews();
-    } else if (tab === 'jogos') {
-      loadServices();
-    } else if (tab === 'pedidos') {
-      loadOrders();
-    } else {
-      loadAgenda();
-    }
-  }, [open, tab, filter]);
-
-  useEffect(() => {
-    if (!open || tab !== 'agenda') return;
-    loadAgenda();
-  }, [agendaDate]);
-
-  useEffect(() => {
     document.body.style.overflow =
-      open || serviceModalOpen ? 'hidden' : '';
+      open || serviceModalOpen
+        ? 'hidden'
+        : '';
 
     return () => {
       document.body.style.overflow = '';
     };
   }, [open, serviceModalOpen]);
 
+  useEffect(() => {
+    if (!open) return;
+
+    if (tab === 'avaliacoes') {
+      loadReviews();
+    }
+
+    if (tab === 'jogos') {
+      loadServices();
+    }
+
+    if (tab === 'pedidos') {
+      loadOrders();
+    }
+
+    if (tab === 'agenda') {
+      loadAgenda();
+    }
+  }, [open, tab, filter]);
+
+  useEffect(() => {
+    if (
+      open &&
+      tab === 'agenda'
+    ) {
+      loadAgenda();
+    }
+  }, [agendaDate]);
+
+  function clearMessages() {
+    setError('');
+    setSuccess('');
+  }
+
   async function loadReviews() {
     setLoading(true);
     setError('');
 
-    const { data, error } = await supabase
-      .from('reviews')
-      .select(
-        'id, estrelas, comentario, status, destaque, created_at'
-      )
-      .eq('status', filter)
-      .order('created_at', { ascending: false });
+    const { data, error } =
+      await supabase
+        .from('reviews')
+        .select(
+          'id, estrelas, comentario, status, destaque, created_at'
+        )
+        .eq('status', filter)
+        .order('created_at', {
+          ascending: false,
+        });
 
     if (error) {
+      console.error(error);
+      setReviews([]);
+
       setError(
         'Não foi possível carregar as avaliações.'
       );
-      setReviews([]);
     } else {
-      setReviews((data ?? []) as Review[]);
+      setReviews(
+        (data ?? []) as Review[]
+      );
     }
 
     setLoading(false);
@@ -251,24 +356,80 @@ export function AdminPanel() {
     setLoading(true);
     setError('');
 
-    const { data, error } = await supabase
-      .from('services')
-      .select(
-        'id, nome, preco, descricao, categoria, area, ativo, destaque, ordem, created_at'
-      )
-      .order('categoria', { ascending: true })
-      .order('ordem', { ascending: true });
+    const { data, error } =
+      await supabase
+        .from('services')
+        .select(
+          'id, nome, preco, descricao, categoria, area, ativo, destaque, ordem, created_at'
+        )
+        .order('categoria', {
+          ascending: true,
+        })
+        .order('ordem', {
+          ascending: true,
+        });
 
     if (error) {
       console.error(error);
 
+      setServices([]);
+
       setError(
         'Não foi possível carregar os jogos.'
       );
-
-      setServices([]);
     } else {
-      setServices((data ?? []) as Service[]);
+      setServices(
+        (data ?? []) as Service[]
+      );
+    }
+
+    setLoading(false);
+  }
+
+  async function loadOrders() {
+    setLoading(true);
+    setError('');
+
+    const { data, error } =
+      await supabase
+        .from('orders')
+        .select(`
+          id,
+          user_id,
+          status,
+          payment_status,
+          total,
+          appointment_start_at,
+          appointment_end_at,
+          duration_minutes,
+          created_at,
+          order_items (
+            id,
+            service_name,
+            category,
+            unit_price,
+            quantity,
+            total_price,
+            question,
+            duration_minutes
+          )
+        `)
+        .order('created_at', {
+          ascending: false,
+        });
+
+    if (error) {
+      console.error(error);
+
+      setOrders([]);
+
+      setError(
+        'Não foi possível carregar os pedidos.'
+      );
+    } else {
+      setOrders(
+        (data ?? []) as Order[]
+      );
     }
 
     setLoading(false);
@@ -279,7 +440,9 @@ export function AdminPanel() {
     setError('');
 
     const { startIso, endIso } =
-      getSaoPauloDayRange(agendaDate);
+      getSaoPauloDayRange(
+        agendaDate
+      );
 
     const [
       appointmentsResult,
@@ -291,36 +454,61 @@ export function AdminPanel() {
         .select(
           'id, order_id, start_at, end_at, duration_minutes, status'
         )
-        .gte('start_at', startIso)
-        .lt('start_at', endIso)
-        .neq('status', 'cancelado')
-        .order('start_at', { ascending: true }),
+        .gte(
+          'start_at',
+          startIso
+        )
+        .lt(
+          'start_at',
+          endIso
+        )
+        .neq(
+          'status',
+          'cancelado'
+        )
+        .order('start_at', {
+          ascending: true,
+        }),
 
       supabase
         .from('schedule_blocks')
         .select(
           'id, start_at, end_at, reason'
         )
-        .lt('start_at', endIso)
-        .gt('end_at', startIso)
-        .order('start_at', { ascending: true }),
+        .lt(
+          'start_at',
+          endIso
+        )
+        .gt(
+          'end_at',
+          startIso
+        )
+        .order('start_at', {
+          ascending: true,
+        }),
 
       supabase
         .from('availability')
         .select(
           'id, day_of_week, start_time, end_time, active'
         )
-        .order('day_of_week', { ascending: true }),
+        .order('day_of_week', {
+          ascending: true,
+        }),
     ]);
 
-    if (appointmentsResult.error) {
+    if (
+      appointmentsResult.error
+    ) {
       console.error(
         appointmentsResult.error
       );
+
+      setAppointments([]);
+
       setError(
         'Não foi possível carregar os atendimentos da agenda.'
       );
-      setAppointments([]);
     } else {
       setAppointments(
         (appointmentsResult.data ??
@@ -329,11 +517,15 @@ export function AdminPanel() {
     }
 
     if (blocksResult.error) {
-      console.error(blocksResult.error);
+      console.error(
+        blocksResult.error
+      );
+
+      setScheduleBlocks([]);
+
       setError(
         'Não foi possível carregar os bloqueios da agenda.'
       );
-      setScheduleBlocks([]);
     } else {
       setScheduleBlocks(
         (blocksResult.data ??
@@ -341,14 +533,18 @@ export function AdminPanel() {
       );
     }
 
-    if (availabilityResult.error) {
+    if (
+      availabilityResult.error
+    ) {
       console.error(
         availabilityResult.error
       );
+
+      setAvailabilityDays([]);
+
       setError(
         'Não foi possível carregar os horários de atendimento.'
       );
-      setAvailabilityDays([]);
     } else {
       setAvailabilityDays(
         (availabilityResult.data ??
@@ -359,433 +555,62 @@ export function AdminPanel() {
     setLoading(false);
   }
 
-  function updateAvailabilityLocal(
-    dayOfWeek: number,
-    changes: Partial<
-      Pick<
-        AvailabilityDay,
-        'start_time' | 'end_time' | 'active'
-      >
-    >
-  ) {
-    setAvailabilityDays((current) =>
-      current.map((day) =>
-        day.day_of_week === dayOfWeek
-          ? { ...day, ...changes }
-          : day
-      )
-    );
-  }
-
-  async function saveAvailabilityDay(
-    day: AvailabilityDay
-  ) {
-    setError('');
-    setSuccess('');
-
-    if (
-      day.active &&
-      day.end_time <= day.start_time
-    ) {
-      setError(
-        `${getWeekdayName(day.day_of_week)}: o horário final precisa ser depois do horário inicial.`
-      );
-      return;
-    }
-
-    setSavingAvailabilityDay(
-      day.day_of_week
-    );
-
-    const { error } = await supabase
-      .from('availability')
-      .update({
-        active: day.active,
-        start_time: normalizeTimeForDatabase(
-          day.start_time
-        ),
-        end_time: normalizeTimeForDatabase(
-          day.end_time
-        ),
-      })
-      .eq('id', day.id);
-
-    if (error) {
-      console.error(error);
-      setError(
-        `Não foi possível salvar ${getWeekdayName(day.day_of_week)}.`
-      );
-      setSavingAvailabilityDay(null);
-      await loadAgenda();
-      return;
-    }
-
-    setSuccess(
-      `${getWeekdayName(day.day_of_week)} atualizado com sucesso ✦`
-    );
-    setSavingAvailabilityDay(null);
-    await loadAgenda();
-  }
-
-  async function createScheduleBlock() {
-    setError('');
-    setSuccess('');
-
-    if (!agendaStartTime || !agendaEndTime) {
-      setError(
-        'Informe o início e o fim do bloqueio.'
-      );
-      return;
-    }
-
-    if (agendaEndTime <= agendaStartTime) {
-      setError(
-        'O horário final precisa ser depois do horário inicial.'
-      );
-      return;
-    }
-
-    const startAt =
-      saoPauloLocalToIso(
-        agendaDate,
-        agendaStartTime
-      );
-
-    const endAt =
-      saoPauloLocalToIso(
-        agendaDate,
-        agendaEndTime
-      );
-
-    const overlapsAppointment =
-      appointments.some((appointment) => {
-        const appointmentStart =
-          new Date(appointment.start_at).getTime();
-        const appointmentEnd =
-          new Date(appointment.end_at).getTime();
-
-        return (
-          new Date(startAt).getTime() <
-            appointmentEnd &&
-          new Date(endAt).getTime() >
-            appointmentStart
-        );
-      });
-
-    if (overlapsAppointment) {
-      setError(
-        'Esse período já possui um atendimento reservado ou confirmado.'
-      );
-      return;
-    }
-
-    setSavingBlock(true);
-
-    const { error } = await supabase
-      .from('schedule_blocks')
-      .insert({
-        start_at: startAt,
-        end_at: endAt,
-        reason:
-          agendaReason.trim() ||
-          'Indisponível',
-      });
-
-    if (error) {
-      console.error(error);
-      setError(
-        'Não foi possível bloquear esse horário.'
-      );
-      setSavingBlock(false);
-      return;
-    }
-
-    setAgendaReason('');
-    setSuccess(
-      'Horário bloqueado. Ele não aparecerá mais para clientes ✦'
-    );
-
-    await loadAgenda();
-    setSavingBlock(false);
-  }
-
-  async function deleteScheduleBlock(
-    block: ScheduleBlock
-  ) {
-    const confirmed = window.confirm(
-      'Liberar este período novamente para agendamentos?'
-    );
-
-    if (!confirmed) return;
-
-    setActionId(block.id);
-    setError('');
-    setSuccess('');
-
-    const { error } = await supabase
-      .from('schedule_blocks')
-      .delete()
-      .eq('id', block.id);
-
-    if (error) {
-      console.error(error);
-      setError(
-        'Não foi possível liberar esse horário.'
-      );
-      setActionId(null);
-      return;
-    }
-
-    setSuccess(
-      'Horário liberado novamente ✦'
-    );
-
-    await loadAgenda();
-    setActionId(null);
-  }
-
-  function changeAgendaDay(days: number) {
-    setAgendaDate(
-      addDaysToDateString(agendaDate, days)
-    );
-    setError('');
-    setSuccess('');
-  }
-
-  async function loadOrders() {
-    setLoading(true);
-    setError('');
-    setSuccess('');
-
-    const { data, error } = await supabase
-      .from('orders')
-      .select(`
-        id,
-        user_id,
-        status,
-        payment_status,
-        total,
-        appointment_start_at,
-        appointment_end_at,
-        duration_minutes,
-        created_at,
-        order_items (
-          id,
-          service_name,
-          category,
-          unit_price,
-          quantity,
-          total_price,
-          question,
-          duration_minutes
-        )
-      `)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error(error);
-      setOrders([]);
-      setError(
-        'Não foi possível carregar os pedidos.'
-      );
-    } else {
-      setOrders((data ?? []) as Order[]);
-    }
-
-    setLoading(false);
-  }
-
-  async function confirmOrderPayment(order: Order) {
-    const confirmed = window.confirm(
-      `Confirmar o pagamento do pedido #${order.id}?`
-    );
-
-    if (!confirmed) return;
-
-    setActionId(order.id);
-    setError('');
-    setSuccess('');
-
-    const { error: orderError } = await supabase
-      .from('orders')
-      .update({
-        status: 'pago',
-        payment_status: 'pago',
-        paid_at: new Date().toISOString(),
-      })
-      .eq('id', order.id);
-
-    if (orderError) {
-      console.error(orderError);
-      setError(
-        'Não foi possível confirmar o pagamento.'
-      );
-      setActionId(null);
-      return;
-    }
-
-    const { error: appointmentError } =
-      await supabase
-        .from('appointments')
-        .update({
-          status: 'confirmado',
-        })
-        .eq('order_id', order.id);
-
-    if (appointmentError) {
-      console.error(appointmentError);
-
-      /*
-        Reverte o pedido para não deixar pagamento
-        confirmado com agenda ainda não confirmada.
-      */
-      await supabase
-        .from('orders')
-        .update({
-          status: 'aguardando_pagamento',
-          payment_status: 'pendente',
-          paid_at: null,
-        })
-        .eq('id', order.id);
-
-      setError(
-        'Não foi possível confirmar o horário. O pedido não foi alterado.'
-      );
-      setActionId(null);
-      return;
-    }
-
-    setSuccess(
-      `Pagamento do pedido #${order.id} confirmado ✦`
-    );
-
-    await loadOrders();
-    setActionId(null);
-  }
-
-  async function cancelOrder(order: Order) {
-    const confirmed = window.confirm(
-      `Cancelar o pedido #${order.id}?\n\nO horário reservado será liberado novamente no site.`
-    );
-
-    if (!confirmed) return;
-
-    setActionId(order.id);
-    setError('');
-    setSuccess('');
-
-    const { error: appointmentError } =
-      await supabase
-        .from('appointments')
-        .update({
-          status: 'cancelado',
-        })
-        .eq('order_id', order.id);
-
-    if (appointmentError) {
-      console.error(appointmentError);
-      setError(
-        'Não foi possível liberar o horário deste pedido.'
-      );
-      setActionId(null);
-      return;
-    }
-
-    const { error: orderError } = await supabase
-      .from('orders')
-      .update({
-        status: 'cancelado',
-        payment_status:
-          order.payment_status === 'pago'
-            ? 'reembolsado'
-            : 'cancelado',
-      })
-      .eq('id', order.id);
-
-    if (orderError) {
-      console.error(orderError);
-
-      /*
-        Se o pedido não puder ser cancelado,
-        tentamos devolver a reserva ao estado anterior.
-      */
-      await supabase
-        .from('appointments')
-        .update({
-          status:
-            order.payment_status === 'pago'
-              ? 'confirmado'
-              : 'reservado',
-        })
-        .eq('order_id', order.id);
-
-      setError(
-        'Não foi possível cancelar o pedido.'
-      );
-      setActionId(null);
-      return;
-    }
-
-    setSuccess(
-      `Pedido #${order.id} cancelado. O horário foi liberado.`
-    );
-
-    await loadOrders();
-    setActionId(null);
-  }
-
   async function updateReview(
     id: number,
     changes: Partial<
-      Pick<Review, 'status' | 'destaque'>
+      Pick<
+        Review,
+        'status' | 'destaque'
+      >
     >
   ) {
     setActionId(id);
     setError('');
 
-    const { error } = await supabase
-      .from('reviews')
-      .update(changes)
-      .eq('id', id);
+    const { error } =
+      await supabase
+        .from('reviews')
+        .update(changes)
+        .eq('id', id);
 
     if (error) {
       setError(
         'Não foi possível alterar essa avaliação.'
       );
-
-      setActionId(null);
-      return;
+    } else {
+      await loadReviews();
     }
 
-    await loadReviews();
     setActionId(null);
   }
 
-  async function deleteReview(id: number) {
-    const confirmed = window.confirm(
-      'Deseja realmente excluir esta avaliação?'
-    );
-
-    if (!confirmed) return;
+  async function deleteReview(
+    id: number
+  ) {
+    if (
+      !window.confirm(
+        'Deseja realmente excluir esta avaliação?'
+      )
+    ) {
+      return;
+    }
 
     setActionId(id);
-    setError('');
 
-    const { error } = await supabase
-      .from('reviews')
-      .delete()
-      .eq('id', id);
+    const { error } =
+      await supabase
+        .from('reviews')
+        .delete()
+        .eq('id', id);
 
     if (error) {
       setError(
         'Não foi possível excluir essa avaliação.'
       );
-
-      setActionId(null);
-      return;
+    } else {
+      await loadReviews();
     }
 
-    await loadReviews();
     setActionId(null);
   }
 
@@ -794,30 +619,44 @@ export function AdminPanel() {
 
     setServiceForm({
       ...emptyServiceForm,
-      ordem: String(services.length + 1),
+      ordem: String(
+        services.length + 1
+      ),
     });
 
-    setError('');
-    setSuccess('');
+    clearMessages();
+
     setServiceModalOpen(true);
   }
 
-  function openEditService(service: Service) {
+  function openEditService(
+    service: Service
+  ) {
     setEditingService(service);
 
     setServiceForm({
       nome: service.nome,
-      preco: String(service.preco),
-      descricao: service.descricao,
-      categoria: service.categoria,
-      area: service.area ?? 'geral',
-      ativo: service.ativo,
-      destaque: service.destaque,
-      ordem: String(service.ordem),
+      preco: String(
+        service.preco
+      ),
+      descricao:
+        service.descricao,
+      categoria:
+        service.categoria,
+      area:
+        service.area ??
+        'geral',
+      ativo:
+        service.ativo,
+      destaque:
+        service.destaque,
+      ordem: String(
+        service.ordem
+      ),
     });
 
-    setError('');
-    setSuccess('');
+    clearMessages();
+
     setServiceModalOpen(true);
   }
 
@@ -826,15 +665,20 @@ export function AdminPanel() {
 
     setServiceModalOpen(false);
     setEditingService(null);
-    setServiceForm(emptyServiceForm);
+
+    setServiceForm(
+      emptyServiceForm
+    );
   }
 
   async function saveService() {
-    setError('');
-    setSuccess('');
+    clearMessages();
 
-    const nome = serviceForm.nome.trim();
-    const descricao = serviceForm.descricao.trim();
+    const nome =
+      serviceForm.nome.trim();
+
+    const descricao =
+      serviceForm.descricao.trim();
 
     const preco = Number(
       serviceForm.preco
@@ -843,10 +687,14 @@ export function AdminPanel() {
         .trim()
     );
 
-    const ordem = Number(serviceForm.ordem);
+    const ordem = Number(
+      serviceForm.ordem
+    );
 
     if (!nome) {
-      setError('Informe o nome do jogo.');
+      setError(
+        'Informe o nome do jogo.'
+      );
       return;
     }
 
@@ -854,12 +702,16 @@ export function AdminPanel() {
       !Number.isFinite(preco) ||
       preco < 0
     ) {
-      setError('Informe um preço válido.');
+      setError(
+        'Informe um preço válido.'
+      );
       return;
     }
 
     if (!descricao) {
-      setError('Informe a descrição do jogo.');
+      setError(
+        'Informe a descrição do jogo.'
+      );
       return;
     }
 
@@ -879,174 +731,612 @@ export function AdminPanel() {
       nome,
       preco,
       descricao,
-      categoria: serviceForm.categoria,
+      categoria:
+        serviceForm.categoria,
+
       area:
-        serviceForm.categoria === 'tiragem'
+        serviceForm.categoria ===
+        'tiragem'
           ? serviceForm.area
           : 'geral',
-      ativo: serviceForm.ativo,
-      destaque: serviceForm.destaque,
+
+      ativo:
+        serviceForm.ativo,
+
+      destaque:
+        serviceForm.destaque,
+
       ordem,
     };
 
-    if (editingService) {
-      const { error } = await supabase
-        .from('services')
-        .update(payload)
-        .eq('id', editingService.id);
+    const result =
+      editingService
+        ? await supabase
+            .from('services')
+            .update(payload)
+            .eq(
+              'id',
+              editingService.id
+            )
+        : await supabase
+            .from('services')
+            .insert(payload);
 
-      if (error) {
-        console.error(error);
+    if (result.error) {
+      console.error(
+        result.error
+      );
 
-        setError(
-          'Não foi possível salvar as alterações.'
-        );
+      setError(
+        editingService
+          ? 'Não foi possível salvar as alterações.'
+          : 'Não foi possível criar o novo jogo.'
+      );
 
-        setSavingService(false);
-        return;
-      }
-    } else {
-      const { error } = await supabase
-        .from('services')
-        .insert(payload);
-
-      if (error) {
-        console.error(error);
-
-        setError(
-          'Não foi possível criar o novo jogo.'
-        );
-
-        setSavingService(false);
-        return;
-      }
+      setSavingService(false);
+      return;
     }
 
+    const wasEditing =
+      Boolean(
+        editingService
+      );
+
     setSavingService(false);
-    setServiceModalOpen(false);
+
+    setServiceModalOpen(
+      false
+    );
+
     setEditingService(null);
-    setServiceForm(emptyServiceForm);
+
+    setServiceForm(
+      emptyServiceForm
+    );
 
     setSuccess(
-      editingService
+      wasEditing
         ? 'Jogo atualizado com sucesso ✦'
         : 'Novo jogo criado com sucesso ✦'
     );
 
     await loadServices();
+
+    document.dispatchEvent(
+      new CustomEvent(
+        'services-updated'
+      )
+    );
   }
 
   async function toggleService(
     service: Service
   ) {
-    setActionId(service.id);
-    setError('');
-    setSuccess('');
+    setActionId(
+      service.id
+    );
 
-    const { error } = await supabase
-      .from('services')
-      .update({
-        ativo: !service.ativo,
-      })
-      .eq('id', service.id);
+    const { error } =
+      await supabase
+        .from('services')
+        .update({
+          ativo:
+            !service.ativo,
+        })
+        .eq(
+          'id',
+          service.id
+        );
 
     if (error) {
-      console.error(error);
-
       setError(
         'Não foi possível alterar a disponibilidade.'
       );
-
-      setActionId(null);
-      return;
+    } else {
+      await loadServices();
     }
 
-    await loadServices();
     setActionId(null);
-
-    setSuccess(
-      service.ativo
-        ? 'Jogo desativado.'
-        : 'Jogo ativado ✦'
-    );
   }
 
   async function toggleHighlight(
     service: Service
   ) {
-    setActionId(service.id);
-    setError('');
-    setSuccess('');
+    setActionId(
+      service.id
+    );
 
-    const { error } = await supabase
-      .from('services')
-      .update({
-        destaque: !service.destaque,
-      })
-      .eq('id', service.id);
+    const { error } =
+      await supabase
+        .from('services')
+        .update({
+          destaque:
+            !service.destaque,
+        })
+        .eq(
+          'id',
+          service.id
+        );
 
     if (error) {
-      console.error(error);
-
       setError(
         'Não foi possível alterar o destaque.'
       );
-
-      setActionId(null);
-      return;
+    } else {
+      await loadServices();
     }
 
-    await loadServices();
     setActionId(null);
   }
 
   async function deleteService(
     service: Service
   ) {
-    const confirmed = window.confirm(
-      `Deseja realmente excluir "${service.nome}"?\n\nEssa ação não poderá ser desfeita.`
-    );
+    const confirmed =
+      window.confirm(
+        `Deseja realmente excluir "${service.nome}"?\n\nEssa ação não poderá ser desfeita.`
+      );
 
     if (!confirmed) return;
 
-    setActionId(service.id);
-    setError('');
-    setSuccess('');
+    setActionId(
+      service.id
+    );
 
-    const { error } = await supabase
-      .from('services')
-      .delete()
-      .eq('id', service.id);
+    const { error } =
+      await supabase
+        .from('services')
+        .delete()
+        .eq(
+          'id',
+          service.id
+        );
 
     if (error) {
-      console.error(error);
-
       setError(
         'Não foi possível excluir esse jogo.'
+      );
+    } else {
+      await loadServices();
+
+      document.dispatchEvent(
+        new CustomEvent(
+          'services-updated'
+        )
+      );
+    }
+
+    setActionId(null);
+  }
+
+  async function confirmOrderPayment(
+    order: Order
+  ) {
+    if (
+      !window.confirm(
+        `Confirmar o pagamento do pedido #${order.id}?`
+      )
+    ) {
+      return;
+    }
+
+    setActionId(order.id);
+    clearMessages();
+
+    const {
+      error: orderError,
+    } = await supabase
+      .from('orders')
+      .update({
+        status: 'pago',
+        payment_status:
+          'pago',
+        paid_at:
+          new Date().toISOString(),
+      })
+      .eq('id', order.id);
+
+    if (orderError) {
+      setError(
+        'Não foi possível confirmar o pagamento.'
       );
 
       setActionId(null);
       return;
     }
 
-    await loadServices();
-    setActionId(null);
+    const {
+      error:
+        appointmentError,
+    } = await supabase
+      .from('appointments')
+      .update({
+        status:
+          'confirmado',
+      })
+      .eq(
+        'order_id',
+        order.id
+      );
 
-    setSuccess('Jogo excluído.');
+    if (
+      appointmentError
+    ) {
+      await supabase
+        .from('orders')
+        .update({
+          status:
+            'aguardando_pagamento',
+          payment_status:
+            'pendente',
+          paid_at: null,
+        })
+        .eq(
+          'id',
+          order.id
+        );
+
+      setError(
+        'Não foi possível confirmar o horário. O pedido não foi alterado.'
+      );
+
+      setActionId(null);
+      return;
+    }
+
+    setSuccess(
+      `Pagamento do pedido #${order.id} confirmado ✦`
+    );
+
+    await loadOrders();
+
+    setActionId(null);
+  }
+
+  async function cancelOrder(
+    order: Order
+  ) {
+    if (
+      !window.confirm(
+        `Cancelar o pedido #${order.id}?\n\nO horário reservado será liberado novamente no site.`
+      )
+    ) {
+      return;
+    }
+
+    setActionId(order.id);
+    clearMessages();
+
+    const {
+      error:
+        appointmentError,
+    } = await supabase
+      .from('appointments')
+      .update({
+        status:
+          'cancelado',
+      })
+      .eq(
+        'order_id',
+        order.id
+      );
+
+    if (
+      appointmentError
+    ) {
+      setError(
+        'Não foi possível liberar o horário deste pedido.'
+      );
+
+      setActionId(null);
+      return;
+    }
+
+    const {
+      error: orderError,
+    } = await supabase
+      .from('orders')
+      .update({
+        status:
+          'cancelado',
+
+        payment_status:
+          order.payment_status ===
+          'pago'
+            ? 'reembolsado'
+            : 'cancelado',
+      })
+      .eq(
+        'id',
+        order.id
+      );
+
+    if (orderError) {
+      await supabase
+        .from('appointments')
+        .update({
+          status:
+            order.payment_status ===
+            'pago'
+              ? 'confirmado'
+              : 'reservado',
+        })
+        .eq(
+          'order_id',
+          order.id
+        );
+
+      setError(
+        'Não foi possível cancelar o pedido.'
+      );
+
+      setActionId(null);
+      return;
+    }
+
+    setSuccess(
+      `Pedido #${order.id} cancelado. O horário foi liberado.`
+    );
+
+    await loadOrders();
+
+    setActionId(null);
+  }
+
+  function updateAvailabilityLocal(
+    dayOfWeek: number,
+    changes: Partial<
+      Pick<
+        AvailabilityDay,
+        | 'start_time'
+        | 'end_time'
+        | 'active'
+      >
+    >
+  ) {
+    setAvailabilityDays(
+      (current) =>
+        current.map(
+          (day) =>
+            day.day_of_week ===
+            dayOfWeek
+              ? {
+                  ...day,
+                  ...changes,
+                }
+              : day
+        )
+    );
+  }
+
+  async function saveAvailabilityDay(
+    day: AvailabilityDay
+  ) {
+    clearMessages();
+
+    if (
+      day.active &&
+      day.end_time <=
+        day.start_time
+    ) {
+      setError(
+        `${getWeekdayName(
+          day.day_of_week
+        )}: o horário final precisa ser depois do horário inicial.`
+      );
+
+      return;
+    }
+
+    setSavingAvailabilityDay(
+      day.day_of_week
+    );
+
+    const { error } =
+      await supabase
+        .from('availability')
+        .update({
+          active:
+            day.active,
+
+          start_time:
+            normalizeTimeForDatabase(
+              day.start_time
+            ),
+
+          end_time:
+            normalizeTimeForDatabase(
+              day.end_time
+            ),
+        })
+        .eq('id', day.id);
+
+    if (error) {
+      setError(
+        `Não foi possível salvar ${getWeekdayName(
+          day.day_of_week
+        )}.`
+      );
+    } else {
+      setSuccess(
+        `${getWeekdayName(
+          day.day_of_week
+        )} atualizado com sucesso ✦`
+      );
+    }
+
+    setSavingAvailabilityDay(
+      null
+    );
+
+    await loadAgenda();
+  }
+
+  async function createScheduleBlock() {
+    clearMessages();
+
+    if (
+      !agendaStartTime ||
+      !agendaEndTime
+    ) {
+      setError(
+        'Informe o início e o fim do bloqueio.'
+      );
+      return;
+    }
+
+    if (
+      agendaEndTime <=
+      agendaStartTime
+    ) {
+      setError(
+        'O horário final precisa ser depois do horário inicial.'
+      );
+      return;
+    }
+
+    const startAt =
+      saoPauloLocalToIso(
+        agendaDate,
+        agendaStartTime
+      );
+
+    const endAt =
+      saoPauloLocalToIso(
+        agendaDate,
+        agendaEndTime
+      );
+
+    const startMs =
+      new Date(
+        startAt
+      ).getTime();
+
+    const endMs =
+      new Date(
+        endAt
+      ).getTime();
+
+    const overlaps =
+      appointments.some(
+        (appointment) =>
+          startMs <
+            new Date(
+              appointment.end_at
+            ).getTime() &&
+          endMs >
+            new Date(
+              appointment.start_at
+            ).getTime()
+      );
+
+    if (overlaps) {
+      setError(
+        'Esse período já possui um atendimento reservado ou confirmado.'
+      );
+      return;
+    }
+
+    setSavingBlock(true);
+
+    const { error } =
+      await supabase
+        .from(
+          'schedule_blocks'
+        )
+        .insert({
+          start_at:
+            startAt,
+
+          end_at:
+            endAt,
+
+          reason:
+            agendaReason.trim() ||
+            'Indisponível',
+        });
+
+    if (error) {
+      setError(
+        'Não foi possível bloquear esse horário.'
+      );
+    } else {
+      setAgendaReason('');
+
+      setSuccess(
+        'Horário bloqueado. Ele não aparecerá mais para clientes ✦'
+      );
+
+      await loadAgenda();
+    }
+
+    setSavingBlock(false);
+  }
+
+  async function deleteScheduleBlock(
+    block: ScheduleBlock
+  ) {
+    if (
+      !window.confirm(
+        'Liberar este período novamente para agendamentos?'
+      )
+    ) {
+      return;
+    }
+
+    setActionId(
+      block.id
+    );
+
+    const { error } =
+      await supabase
+        .from(
+          'schedule_blocks'
+        )
+        .delete()
+        .eq(
+          'id',
+          block.id
+        );
+
+    if (error) {
+      setError(
+        'Não foi possível liberar esse horário.'
+      );
+    } else {
+      setSuccess(
+        'Horário liberado novamente ✦'
+      );
+
+      await loadAgenda();
+    }
+
+    setActionId(null);
+  }
+
+  function changeAgendaDay(
+    days: number
+  ) {
+    setAgendaDate(
+      addDaysToDateString(
+        agendaDate,
+        days
+      )
+    );
+
+    clearMessages();
   }
 
   if (!open) return null;
 
   return (
     <>
-      <div className="fixed inset-0 z-[110] bg-bordo-300 overflow-y-auto">
-        <div className="w-full max-w-[480px] min-h-screen mx-auto bg-bordo-300">
-
-          {/* TOPO */}
-          <header className="sticky top-0 z-20 bg-bordo-300/95 backdrop-blur-md border-b border-dourado-200/15">
-            <div className="h-16 px-5 flex items-center justify-between">
+      <div className="fixed inset-0 z-[110] overflow-y-auto bg-bordo-300">
+        <div className="mx-auto min-h-screen w-full max-w-[480px] bg-bordo-300">
+          <header className="sticky top-0 z-20 border-b border-dourado-200/15 bg-bordo-300/95 backdrop-blur-md">
+            <div className="flex h-16 items-center justify-between px-5">
               <div>
-                <p className="font-serif text-[10px] tracking-[0.22em] text-dourado-200/50 uppercase">
+                <p className="font-serif text-[10px] uppercase tracking-[0.22em] text-dourado-200/50">
                   ISLP Tarot
                 </p>
 
@@ -1057,267 +1347,216 @@ export function AdminPanel() {
 
               <button
                 type="button"
-                onClick={() => setOpen(false)}
-                className="w-9 h-9 rounded-full border border-dourado-200/20 flex items-center justify-center text-dourado-200/70"
+                onClick={() =>
+                  setOpen(false)
+                }
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-dourado-200/20 text-dourado-200/70"
                 aria-label="Fechar painel"
               >
-                <X
-                  className="w-4 h-4"
-                  strokeWidth={1.5}
-                />
+                <X className="h-4 w-4" />
               </button>
             </div>
           </header>
 
           <main className="px-5 py-7">
-
-            {/* BOAS-VINDAS */}
             <section className="rounded-2xl border border-dourado-200/20 bg-bordo-200/50 p-5">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full border border-dourado-200/30 flex items-center justify-center">
-                  <span className="text-dourado-200 text-lg">
-                    ✦
-                  </span>
-                </div>
+              <p className="font-serif text-lg text-creme/90">
+                Olá, Isis ✦
+              </p>
 
-                <div>
-                  <p className="font-serif text-lg text-creme/90">
-                    Olá, Isis ✦
-                  </p>
-
-                  <p className="font-serif text-xs text-dourado-200/50 mt-1 tracking-[0.12em] uppercase">
-                    Administradora
-                  </p>
-                </div>
-              </div>
+              <p className="mt-1 font-serif text-xs uppercase tracking-[0.12em] text-dourado-200/50">
+                Administradora
+              </p>
             </section>
 
-            {/* ABAS */}
-            <div className="grid grid-cols-4 gap-2 mt-7">
-              <button
-                type="button"
+            <div className="mt-7 grid grid-cols-4 gap-2">
+              <TabButton
+                active={
+                  tab ===
+                  'avaliacoes'
+                }
                 onClick={() => {
-                  setTab('avaliacoes');
-                  setError('');
-                  setSuccess('');
+                  setTab(
+                    'avaliacoes'
+                  );
+                  clearMessages();
                 }}
-                className={`rounded-xl border py-3 font-serif text-xs transition ${
-                  tab === 'avaliacoes'
-                    ? 'border-dourado-200/45 bg-dourado-200/10 text-dourado-200'
-                    : 'border-dourado-200/15 text-creme/40'
-                }`}
+                icon={
+                  <Star className="h-4 w-4" />
+                }
               >
-                <span className="flex items-center justify-center gap-2">
-                  <Star
-                    className="w-4 h-4"
-                    strokeWidth={1.4}
-                  />
-                  Avaliações
-                </span>
-              </button>
+                Avaliações
+              </TabButton>
 
-              <button
-                type="button"
+              <TabButton
+                active={
+                  tab ===
+                  'jogos'
+                }
                 onClick={() => {
                   setTab('jogos');
-                  setError('');
-                  setSuccess('');
+                  clearMessages();
                 }}
-                className={`rounded-xl border py-3 font-serif text-xs transition ${
-                  tab === 'jogos'
-                    ? 'border-dourado-200/45 bg-dourado-200/10 text-dourado-200'
-                    : 'border-dourado-200/15 text-creme/40'
-                }`}
+                icon={
+                  <Gamepad2 className="h-4 w-4" />
+                }
               >
-                <span className="flex items-center justify-center gap-2">
-                  <Gamepad2
-                    className="w-4 h-4"
-                    strokeWidth={1.4}
-                  />
-                  Jogos
-                </span>
-              </button>
+                Jogos
+              </TabButton>
 
-              <button
-                type="button"
+              <TabButton
+                active={
+                  tab ===
+                  'pedidos'
+                }
                 onClick={() => {
                   setTab('pedidos');
-                  setError('');
-                  setSuccess('');
+                  clearMessages();
                 }}
-                className={`rounded-xl border py-3 font-serif text-[10px] transition ${
-                  tab === 'pedidos'
-                    ? 'border-dourado-200/45 bg-dourado-200/10 text-dourado-200'
-                    : 'border-dourado-200/15 text-creme/40'
-                }`}
+                icon={
+                  <PackageCheck className="h-4 w-4" />
+                }
               >
-                <span className="flex items-center justify-center gap-1.5">
-                  <PackageCheck
-                    className="w-4 h-4"
-                    strokeWidth={1.4}
-                  />
-                  Pedidos
-                </span>
-              </button>
+                Pedidos
+              </TabButton>
 
-              <button
-                type="button"
+              <TabButton
+                active={
+                  tab ===
+                  'agenda'
+                }
                 onClick={() => {
                   setTab('agenda');
-                  setError('');
-                  setSuccess('');
+                  clearMessages();
                 }}
-                className={`rounded-xl border py-3 font-serif text-[10px] transition ${
-                  tab === 'agenda'
-                    ? 'border-dourado-200/45 bg-dourado-200/10 text-dourado-200'
-                    : 'border-dourado-200/15 text-creme/40'
-                }`}
+                icon={
+                  <CalendarDays className="h-4 w-4" />
+                }
               >
-                <span className="flex items-center justify-center gap-1.5">
-                  <CalendarDays
-                    className="w-4 h-4"
-                    strokeWidth={1.4}
-                  />
-                  Agenda
-                </span>
-              </button>
+                Agenda
+              </TabButton>
             </div>
 
-            {/* ============================
-                AVALIAÇÕES
-            ============================ */}
+            <Messages
+              error={error}
+              success={success}
+            />
 
-            {tab === 'avaliacoes' && (
-              <>
-                <div className="flex items-end justify-between mt-9 mb-5">
-                  <div>
-                    <p className="font-serif text-[10px] tracking-[0.22em] text-dourado-200/45 uppercase">
-                      Gerenciamento
-                    </p>
-
-                    <h2 className="font-serif text-2xl text-creme/90 mt-1">
-                      Avaliações
-                    </h2>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={loadReviews}
-                    disabled={loading}
-                    className="w-9 h-9 rounded-full border border-dourado-200/20 flex items-center justify-center text-dourado-200/60 disabled:opacity-40"
-                  >
-                    <RefreshCw
-                      className={`w-4 h-4 ${
-                        loading
-                          ? 'animate-spin'
-                          : ''
-                      }`}
-                      strokeWidth={1.4}
-                    />
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-3 gap-2">
-                  <FilterButton
-                    active={
-                      filter === 'pendente'
-                    }
-                    onClick={() =>
-                      setFilter('pendente')
-                    }
-                  >
-                    Pendentes
-                  </FilterButton>
-
-                  <FilterButton
-                    active={
-                      filter === 'aprovada'
-                    }
-                    onClick={() =>
-                      setFilter('aprovada')
-                    }
-                  >
-                    Aprovadas
-                  </FilterButton>
-
-                  <FilterButton
-                    active={
-                      filter === 'rejeitada'
-                    }
-                    onClick={() =>
-                      setFilter('rejeitada')
-                    }
-                  >
-                    Rejeitadas
-                  </FilterButton>
-                </div>
-
-                <Messages
-                  error={error}
-                  success={success}
+            {tab ===
+              'avaliacoes' && (
+              <section className="mt-8">
+                <SectionTitle
+                  title="Avaliações"
+                  onRefresh={
+                    loadReviews
+                  }
+                  loading={
+                    loading
+                  }
                 />
 
-                {loading && <Loading />}
-
-                {!loading &&
-                  reviews.length === 0 && (
-                    <div className="py-16 flex flex-col items-center text-center">
-                      <Clock3
-                        className="w-7 h-7 text-dourado-200/30"
-                        strokeWidth={1.3}
-                      />
-
-                      <p className="font-serif text-sm text-creme/45 mt-4">
-                        Nenhuma avaliação nesta
-                        categoria.
-                      </p>
-                    </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {(
+                    [
+                      'pendente',
+                      'aprovada',
+                      'rejeitada',
+                    ] as Filter[]
+                  ).map(
+                    (value) => (
+                      <button
+                        key={
+                          value
+                        }
+                        type="button"
+                        onClick={() =>
+                          setFilter(
+                            value
+                          )
+                        }
+                        className={`rounded-full border px-2 py-2.5 font-serif text-[10px] ${
+                          filter ===
+                          value
+                            ? 'border-dourado-200/45 bg-dourado-200/10 text-dourado-200'
+                            : 'border-dourado-200/15 text-creme/40'
+                        }`}
+                      >
+                        {value ===
+                        'pendente'
+                          ? 'Pendentes'
+                          : value ===
+                            'aprovada'
+                          ? 'Aprovadas'
+                          : 'Rejeitadas'}
+                      </button>
+                    )
                   )}
+                </div>
 
-                {!loading &&
-                  reviews.length > 0 && (
-                    <div className="flex flex-col gap-4 mt-6">
-                      {reviews.map((review) => {
+                {loading ? (
+                  <Loading />
+                ) : reviews.length ===
+                  0 ? (
+                  <Empty text="Nenhuma avaliação nesta categoria." />
+                ) : (
+                  <div className="mt-6 flex flex-col gap-4">
+                    {reviews.map(
+                      (
+                        review
+                      ) => {
                         const processing =
-                          actionId === review.id;
+                          actionId ===
+                          review.id;
 
                         return (
                           <article
-                            key={review.id}
+                            key={
+                              review.id
+                            }
                             className="rounded-2xl border border-dourado-200/20 bg-bordo-200/45 p-5"
                           >
                             <div className="flex items-center justify-between">
                               <div className="flex gap-1">
-                                {[1, 2, 3, 4, 5].map(
-                                  (star) => (
+                                {[
+                                  1,
+                                  2,
+                                  3,
+                                  4,
+                                  5,
+                                ].map(
+                                  (
+                                    star
+                                  ) => (
                                     <Star
-                                      key={star}
-                                      className={`w-4 h-4 ${
+                                      key={
+                                        star
+                                      }
+                                      className={`h-4 w-4 ${
                                         star <=
                                         review.estrelas
-                                          ? 'text-dourado-200 fill-current'
+                                          ? 'fill-current text-dourado-200'
                                           : 'text-dourado-200/20'
                                       }`}
-                                      strokeWidth={
-                                        1.2
-                                      }
                                     />
                                   )
                                 )}
                               </div>
 
                               {review.destaque && (
-                                <span className="font-serif text-[9px] tracking-[0.15em] text-dourado-200/60 uppercase">
-                                  Destaque ✦
+                                <span className="font-serif text-[9px] uppercase text-dourado-200/60">
+                                  Destaque
+                                  ✦
                                 </span>
                               )}
                             </div>
 
-                            <p className="font-serif text-[15px] text-creme/80 leading-[175%] mt-4">
-                              {review.comentario}
+                            <p className="mt-4 font-serif text-[15px] leading-[175%] text-creme/80">
+                              {
+                                review.comentario
+                              }
                             </p>
 
-                            <p className="font-serif text-[10px] text-creme/25 mt-4">
+                            <p className="mt-4 font-serif text-[10px] text-creme/25">
                               {new Date(
                                 review.created_at
                               ).toLocaleDateString(
@@ -1325,7 +1564,7 @@ export function AdminPanel() {
                               )}
                             </p>
 
-                            <div className="mt-5 pt-4 border-t border-dourado-200/10">
+                            <div className="mt-5 border-t border-dourado-200/10 pt-4">
                               {filter ===
                                 'pendente' && (
                                 <div className="grid grid-cols-2 gap-2">
@@ -1343,7 +1582,7 @@ export function AdminPanel() {
                                       )
                                     }
                                   >
-                                    <Check className="w-4 h-4" />
+                                    <Check className="h-4 w-4" />
                                     Aprovar
                                   </ActionButton>
 
@@ -1361,7 +1600,7 @@ export function AdminPanel() {
                                       )
                                     }
                                   >
-                                    <XCircle className="w-4 h-4" />
+                                    <XCircle className="h-4 w-4" />
                                     Rejeitar
                                   </ActionButton>
                                 </div>
@@ -1369,8 +1608,7 @@ export function AdminPanel() {
 
                               {filter ===
                                 'aprovada' && (
-                                <button
-                                  type="button"
+                                <ActionButton
                                   disabled={
                                     processing
                                   }
@@ -1383,18 +1621,16 @@ export function AdminPanel() {
                                       }
                                     )
                                   }
-                                  className="w-full rounded-xl border border-dourado-200/20 px-4 py-3 font-serif text-xs text-dourado-200/75 disabled:opacity-40"
                                 >
                                   {review.destaque
                                     ? 'Remover dos destaques'
                                     : 'Marcar como destaque ✦'}
-                                </button>
+                                </ActionButton>
                               )}
 
                               {filter ===
                                 'rejeitada' && (
-                                <button
-                                  type="button"
+                                <ActionButton
                                   disabled={
                                     processing
                                   }
@@ -1407,106 +1643,80 @@ export function AdminPanel() {
                                       }
                                     )
                                   }
-                                  className="w-full rounded-xl border border-dourado-200/20 px-4 py-3 font-serif text-xs text-dourado-200/75 disabled:opacity-40"
                                 >
-                                  Aprovar avaliação
-                                </button>
+                                  Aprovar
+                                  avaliação
+                                </ActionButton>
                               )}
 
                               <button
                                 type="button"
-                                disabled={processing}
+                                disabled={
+                                  processing
+                                }
                                 onClick={() =>
                                   deleteReview(
                                     review.id
                                   )
                                 }
-                                className="mt-2 w-full flex items-center justify-center gap-2 px-4 py-3 font-serif text-xs text-creme/35 hover:text-red-300/70 disabled:opacity-40"
+                                className="mt-2 flex w-full items-center justify-center gap-2 px-4 py-3 font-serif text-xs text-creme/35 disabled:opacity-40"
                               >
-                                <Trash2 className="w-3.5 h-3.5" />
+                                <Trash2 className="h-3.5 w-3.5" />
                                 Excluir
                               </button>
                             </div>
                           </article>
                         );
-                      })}
-                    </div>
-                  )}
-              </>
+                      }
+                    )}
+                  </div>
+                )}
+              </section>
             )}
 
-            {/* ============================
-                JOGOS
-            ============================ */}
-
             {tab === 'jogos' && (
-              <>
-                <div className="flex items-end justify-between mt-9 mb-5">
-                  <div>
-                    <p className="font-serif text-[10px] tracking-[0.22em] text-dourado-200/45 uppercase">
-                      Gerenciamento
-                    </p>
-
-                    <h2 className="font-serif text-2xl text-creme/90 mt-1">
-                      Jogos
-                    </h2>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={loadServices}
-                    disabled={loading}
-                    className="w-9 h-9 rounded-full border border-dourado-200/20 flex items-center justify-center text-dourado-200/60 disabled:opacity-40"
-                  >
-                    <RefreshCw
-                      className={`w-4 h-4 ${
-                        loading
-                          ? 'animate-spin'
-                          : ''
-                      }`}
-                      strokeWidth={1.4}
-                    />
-                  </button>
-                </div>
+              <section className="mt-8">
+                <SectionTitle
+                  title="Jogos"
+                  onRefresh={
+                    loadServices
+                  }
+                  loading={
+                    loading
+                  }
+                />
 
                 <button
                   type="button"
-                  onClick={openNewService}
-                  className="w-full flex items-center justify-center gap-2 rounded-xl border border-dourado-200/35 bg-dourado-200/10 px-4 py-3.5 font-serif text-sm text-dourado-200"
+                  onClick={
+                    openNewService
+                  }
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-dourado-200/35 bg-dourado-200/10 px-4 py-3.5 font-serif text-sm text-dourado-200"
                 >
-                  <Plus
-                    className="w-4 h-4"
-                    strokeWidth={1.5}
-                  />
+                  <Plus className="h-4 w-4" />
                   Novo jogo
                 </button>
 
-                <Messages
-                  error={error}
-                  success={success}
-                />
-
-                {loading && <Loading />}
-
-                {!loading &&
-                  services.length === 0 && (
-                    <div className="py-16 text-center">
-                      <p className="font-serif text-sm text-creme/45">
-                        Nenhum jogo cadastrado.
-                      </p>
-                    </div>
-                  )}
-
-                {!loading &&
-                  services.length > 0 && (
-                    <div className="flex flex-col gap-4 mt-6">
-                      {services.map((service) => {
+                {loading ? (
+                  <Loading />
+                ) : services.length ===
+                  0 ? (
+                  <Empty text="Nenhum jogo cadastrado." />
+                ) : (
+                  <div className="mt-6 flex flex-col gap-4">
+                    {services.map(
+                      (
+                        service
+                      ) => {
                         const processing =
-                          actionId === service.id;
+                          actionId ===
+                          service.id;
 
                         return (
                           <article
-                            key={service.id}
+                            key={
+                              service.id
+                            }
                             className={`rounded-2xl border p-5 ${
                               service.ativo
                                 ? 'border-dourado-200/20 bg-bordo-200/45'
@@ -1514,100 +1724,72 @@ export function AdminPanel() {
                             }`}
                           >
                             <div className="flex items-start justify-between gap-4">
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="font-serif text-[9px] tracking-[0.15em] text-dourado-200/50 uppercase">
-                                    {service.categoria ===
-                                    'consulta'
-                                      ? 'Consulta'
-                                      : 'Tiragem'}
-                                  </span>
-
+                              <div>
+                                <p className="font-serif text-[9px] uppercase tracking-[0.15em] text-dourado-200/50">
                                   {service.categoria ===
-                                    'tiragem' && (
-                                    <span className="font-serif text-[9px] text-creme/35 uppercase">
-                                      • {formatServiceArea(service.area)}
-                                    </span>
-                                  )}
+                                  'consulta'
+                                    ? 'Consulta'
+                                    : `Tiragem • ${formatServiceArea(
+                                        service.area
+                                      )}`}
+                                </p>
 
-                                  {!service.ativo && (
-                                    <span className="font-serif text-[9px] text-creme/30 uppercase">
-                                      • Inativo
-                                    </span>
-                                  )}
-
-                                  {service.destaque && (
-                                    <span className="font-serif text-[9px] text-dourado-200/60 uppercase">
-                                      • Destaque ✦
-                                    </span>
-                                  )}
-                                </div>
-
-                                <h3 className="font-serif text-lg text-creme/90 mt-2">
-                                  {service.nome}
+                                <h3 className="mt-2 font-serif text-lg text-creme/90">
+                                  {
+                                    service.nome
+                                  }
                                 </h3>
                               </div>
 
-                              <span className="font-serif text-lg text-dourado-200 whitespace-nowrap">
-                                {Number(
+                              <span className="whitespace-nowrap font-serif text-lg text-dourado-200">
+                                {formatMoney(
                                   service.preco
-                                ).toLocaleString(
-                                  'pt-BR',
-                                  {
-                                    style:
-                                      'currency',
-                                    currency: 'BRL',
-                                  }
                                 )}
                               </span>
                             </div>
 
-                            <p className="font-serif text-sm text-creme/55 leading-relaxed mt-4">
-                              {service.descricao}
+                            <p className="mt-4 font-serif text-sm leading-relaxed text-creme/55">
+                              {
+                                service.descricao
+                              }
                             </p>
 
-                            <div className="flex items-center justify-between mt-5 pt-4 border-t border-dourado-200/10">
-                              <span className="font-serif text-[10px] text-creme/30">
-                                Ordem:{' '}
-                                {service.ordem}
-                              </span>
+                            <p className="mt-4 font-serif text-[10px] text-creme/30">
+                              Ordem:{' '}
+                              {
+                                service.ordem
+                              }{' '}
+                              •{' '}
+                              {service.ativo
+                                ? 'Ativo'
+                                : 'Desativado'}{' '}
+                              {service.destaque
+                                ? '• Destaque ✦'
+                                : ''}
+                            </p>
 
-                              <span
-                                className={`font-serif text-[10px] ${
-                                  service.ativo
-                                    ? 'text-dourado-200/60'
-                                    : 'text-creme/30'
-                                }`}
-                              >
-                                {service.ativo
-                                  ? 'Ativo'
-                                  : 'Desativado'}
-                              </span>
-                            </div>
-
-                            {/* EDITAR */}
                             <button
                               type="button"
-                              disabled={processing}
+                              disabled={
+                                processing
+                              }
                               onClick={() =>
                                 openEditService(
                                   service
                                 )
                               }
-                              className="mt-4 w-full flex items-center justify-center gap-2 rounded-xl border border-dourado-200/25 bg-dourado-200/5 px-4 py-3 font-serif text-xs text-dourado-200/80 disabled:opacity-40"
+                              className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-dourado-200/25 bg-dourado-200/5 px-4 py-3 font-serif text-xs text-dourado-200/80 disabled:opacity-40"
                             >
-                              <Edit3
-                                className="w-3.5 h-3.5"
-                                strokeWidth={1.4}
-                              />
+                              <Edit3 className="h-3.5 w-3.5" />
                               Editar
                             </button>
 
-                            {/* ATIVAR/DESATIVAR + DESTAQUE */}
-                            <div className="grid grid-cols-2 gap-2 mt-2">
+                            <div className="mt-2 grid grid-cols-2 gap-2">
                               <button
                                 type="button"
-                                disabled={processing}
+                                disabled={
+                                  processing
+                                }
                                 onClick={() =>
                                   toggleService(
                                     service
@@ -1622,7 +1804,9 @@ export function AdminPanel() {
 
                               <button
                                 type="button"
-                                disabled={processing}
+                                disabled={
+                                  processing
+                                }
                                 onClick={() =>
                                   toggleHighlight(
                                     service
@@ -1636,341 +1820,240 @@ export function AdminPanel() {
                               </button>
                             </div>
 
-                            {/* EXCLUIR */}
                             <button
                               type="button"
-                              disabled={processing}
+                              disabled={
+                                processing
+                              }
                               onClick={() =>
                                 deleteService(
                                   service
                                 )
                               }
-                              className="mt-2 w-full flex items-center justify-center gap-2 px-4 py-3 font-serif text-[10px] text-creme/30 hover:text-red-300/70 disabled:opacity-40"
+                              className="mt-2 flex w-full items-center justify-center gap-2 px-4 py-3 font-serif text-[10px] text-creme/30 disabled:opacity-40"
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
+                              <Trash2 className="h-3.5 w-3.5" />
                               Excluir jogo
                             </button>
                           </article>
                         );
-                      })}
-                    </div>
-                  )}
-              </>
-            )}
-
-            {/* ============================
-                PEDIDOS
-            ============================ */}
-
-            {tab === 'pedidos' && (
-              <>
-                <div className="flex items-end justify-between mt-9 mb-5">
-                  <div>
-                    <p className="font-serif text-[10px] tracking-[0.22em] text-dourado-200/45 uppercase">
-                      Gerenciamento
-                    </p>
-
-                    <h2 className="font-serif text-2xl text-creme/90 mt-1">
-                      Pedidos
-                    </h2>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={loadOrders}
-                    disabled={loading}
-                    className="w-9 h-9 rounded-full border border-dourado-200/20 flex items-center justify-center text-dourado-200/60 disabled:opacity-40"
-                    aria-label="Atualizar pedidos"
-                  >
-                    <RefreshCw
-                      className={`w-4 h-4 ${
-                        loading ? 'animate-spin' : ''
-                      }`}
-                      strokeWidth={1.4}
-                    />
-                  </button>
-                </div>
-
-                <Messages
-                  error={error}
-                  success={success}
-                />
-
-                {loading && <Loading />}
-
-                {!loading && orders.length === 0 && (
-                  <div className="py-16 flex flex-col items-center text-center">
-                    <PackageCheck
-                      className="w-7 h-7 text-dourado-200/30"
-                      strokeWidth={1.3}
-                    />
-
-                    <p className="font-serif text-sm text-creme/45 mt-4">
-                      Nenhum pedido encontrado.
-                    </p>
+                      }
+                    )}
                   </div>
                 )}
+              </section>
+            )}
 
-                {!loading && orders.length > 0 && (
-                  <div className="flex flex-col gap-4 mt-6">
-                    {orders.map((order) => {
-                      const processing =
-                        actionId === order.id;
+            {tab ===
+              'pedidos' && (
+              <section className="mt-8">
+                <SectionTitle
+                  title="Pedidos"
+                  onRefresh={
+                    loadOrders
+                  }
+                  loading={
+                    loading
+                  }
+                />
 
-                      const canConfirm =
-                        order.status !== 'cancelado' &&
-                        order.payment_status !== 'pago';
-
-                      const canCancel =
-                        order.status !== 'cancelado';
-
-                      return (
+                {loading ? (
+                  <Loading />
+                ) : orders.length ===
+                  0 ? (
+                  <Empty text="Nenhum pedido encontrado." />
+                ) : (
+                  <div className="flex flex-col gap-4">
+                    {orders.map(
+                      (order) => (
                         <article
-                          key={order.id}
+                          key={
+                            order.id
+                          }
                           className="rounded-2xl border border-dourado-200/20 bg-bordo-200/45 p-5"
                         >
                           <div className="flex items-start justify-between gap-4">
-                            <div>
-                              <p className="font-serif text-[9px] tracking-[0.16em] text-dourado-200/50 uppercase">
-                                Pedido
-                              </p>
-
-                              <h3 className="mt-1 font-serif text-xl text-creme/90">
-                                #{order.id}
-                              </h3>
-                            </div>
+                            <h3 className="font-serif text-xl text-creme/90">
+                              Pedido
+                              #{order.id}
+                            </h3>
 
                             <OrderStatus
-                              status={order.status}
+                              status={
+                                order.status
+                              }
                               paymentStatus={
                                 order.payment_status
                               }
                             />
                           </div>
 
-                          <div className="mt-5 space-y-3">
-                            {(order.order_items ?? []).map(
-                              (item) => (
+                          <div className="mt-4 space-y-3">
+                            {(
+                              order.order_items ??
+                              []
+                            ).map(
+                              (
+                                item
+                              ) => (
                                 <div
-                                  key={item.id}
+                                  key={
+                                    item.id
+                                  }
                                   className="rounded-xl border border-dourado-200/10 bg-bordo-300/35 p-4"
                                 >
-                                  <div className="flex items-start justify-between gap-3">
-                                    <div>
-                                      <p className="font-serif text-sm text-creme/85">
-                                        {item.service_name}
-                                      </p>
+                                  <div className="flex justify-between gap-3">
+                                    <span className="font-serif text-sm text-creme/85">
+                                      {
+                                        item.service_name
+                                      }
+                                    </span>
 
-                                      <p className="mt-1 font-serif text-[10px] text-creme/35">
-                                        {item.category ===
-                                        'consulta'
-                                          ? 'Consulta'
-                                          : 'Tiragem'}
-                                        {item.quantity > 1
-                                          ? ` • ${item.quantity}x`
-                                          : ''}
-                                      </p>
-                                    </div>
-
-                                    <span className="font-serif text-xs text-dourado-200/75 whitespace-nowrap">
-                                      {Number(
+                                    <span className="font-serif text-xs text-dourado-200/75">
+                                      {formatMoney(
                                         item.total_price
-                                      ).toLocaleString(
-                                        'pt-BR',
-                                        {
-                                          style:
-                                            'currency',
-                                          currency:
-                                            'BRL',
-                                        }
                                       )}
                                     </span>
                                   </div>
 
                                   {item.question && (
-                                    <div className="mt-3 border-t border-dourado-200/10 pt-3">
-                                      <p className="font-serif text-[9px] tracking-[0.12em] text-dourado-200/45 uppercase">
-                                        Pergunta
-                                      </p>
+                                    <p className="mt-3 border-t border-dourado-200/10 pt-3 font-serif text-xs leading-relaxed text-creme/65">
+                                      <span className="text-dourado-200/45">
+                                        Pergunta:{' '}
+                                      </span>
 
-                                      <p className="mt-1.5 font-serif text-xs leading-relaxed text-creme/65">
-                                        {item.question}
-                                      </p>
-                                    </div>
+                                      {
+                                        item.question
+                                      }
+                                    </p>
                                   )}
                                 </div>
                               )
                             )}
                           </div>
 
-                          <div className="mt-5 grid grid-cols-2 gap-3 rounded-xl border border-dourado-200/10 bg-bordo-300/25 p-4">
-                            <div>
-                              <p className="font-serif text-[9px] text-creme/30 uppercase">
-                                Data
-                              </p>
+                          <div className="mt-5 grid grid-cols-2 gap-3 rounded-xl border border-dourado-200/10 bg-bordo-300/25 p-4 font-serif text-xs text-creme/70">
+                            <p>
+                              Data
+                              <br />
+                              {formatOrderDate(
+                                order.appointment_start_at
+                              )}
+                            </p>
 
-                              <p className="mt-1 font-serif text-xs text-creme/70">
-                                {formatOrderDate(
-                                  order.appointment_start_at
-                                )}
-                              </p>
-                            </div>
+                            <p>
+                              Horário
+                              <br />
+                              {formatOrderTime(
+                                order.appointment_start_at
+                              )}
+                            </p>
 
-                            <div>
-                              <p className="font-serif text-[9px] text-creme/30 uppercase">
-                                Horário
-                              </p>
+                            <p>
+                              Duração
+                              <br />
+                              {formatDuration(
+                                order.duration_minutes
+                              )}
+                            </p>
 
-                              <p className="mt-1 font-serif text-xs text-creme/70">
-                                {formatOrderTime(
-                                  order.appointment_start_at
-                                )}
-                              </p>
-                            </div>
-
-                            <div>
-                              <p className="font-serif text-[9px] text-creme/30 uppercase">
-                                Duração
-                              </p>
-
-                              <p className="mt-1 font-serif text-xs text-creme/70">
-                                {formatDuration(
-                                  order.duration_minutes
-                                )}
-                              </p>
-                            </div>
-
-                            <div>
-                              <p className="font-serif text-[9px] text-creme/30 uppercase">
-                                Total
-                              </p>
-
-                              <p className="mt-1 font-serif text-sm text-dourado-200">
-                                {Number(
+                            <p>
+                              Total
+                              <br />
+                              <span className="text-dourado-200">
+                                {formatMoney(
                                   order.total
-                                ).toLocaleString(
-                                  'pt-BR',
-                                  {
-                                    style:
-                                      'currency',
-                                    currency: 'BRL',
-                                  }
                                 )}
-                              </p>
-                            </div>
+                              </span>
+                            </p>
                           </div>
 
-                          <p className="mt-3 font-serif text-[9px] text-creme/25">
-                            Criado em{' '}
-                            {new Date(
-                              order.created_at
-                            ).toLocaleString(
-                              'pt-BR',
-                              {
-                                timeZone:
-                                  'America/Sao_Paulo',
-                              }
+                          {order.status !==
+                            'cancelado' &&
+                            order.payment_status !==
+                              'pago' && (
+                              <ActionButton
+                                disabled={
+                                  actionId ===
+                                  order.id
+                                }
+                                onClick={() =>
+                                  confirmOrderPayment(
+                                    order
+                                  )
+                                }
+                              >
+                                <Check className="h-4 w-4" />
+                                Confirmar
+                                pagamento
+                              </ActionButton>
                             )}
-                          </p>
 
-                          {canConfirm && (
+                          {order.status !==
+                            'cancelado' && (
                             <button
                               type="button"
-                              disabled={processing}
+                              disabled={
+                                actionId ===
+                                order.id
+                              }
                               onClick={() =>
-                                confirmOrderPayment(
+                                cancelOrder(
                                   order
                                 )
                               }
-                              className="mt-5 w-full flex items-center justify-center gap-2 rounded-xl border border-dourado-200/35 bg-dourado-200/10 px-4 py-3.5 font-serif text-xs text-dourado-200 disabled:opacity-40"
+                              className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-red-300/15 px-4 py-3 font-serif text-xs text-red-300/65 disabled:opacity-40"
                             >
-                              <Check className="w-4 h-4" />
-                              Confirmar pagamento
-                            </button>
-                          )}
-
-                          {canCancel && (
-                            <button
-                              type="button"
-                              disabled={processing}
-                              onClick={() =>
-                                cancelOrder(order)
-                              }
-                              className="mt-2 w-full flex items-center justify-center gap-2 rounded-xl border border-red-300/15 px-4 py-3 font-serif text-xs text-red-300/65 disabled:opacity-40"
-                            >
-                              <XCircle className="w-4 h-4" />
+                              <XCircle className="h-4 w-4" />
                               Cancelar pedido
                             </button>
                           )}
-
-                          {order.status ===
-                            'cancelado' && (
-                            <p className="mt-5 text-center font-serif text-xs text-creme/35">
-                              Pedido cancelado • horário
-                              liberado
-                            </p>
-                          )}
                         </article>
-                      );
-                    })}
+                      )
+                    )}
                   </div>
                 )}
-              </>
+              </section>
             )}
 
-
-            {/* ============================
-                AGENDA
-            ============================ */}
-
             {tab === 'agenda' && (
-              <>
-                <div className="flex items-end justify-between mt-9 mb-5">
-                  <div>
-                    <p className="font-serif text-[10px] tracking-[0.22em] text-dourado-200/45 uppercase">
-                      Gerenciamento
-                    </p>
-
-                    <h2 className="font-serif text-2xl text-creme/90 mt-1">
-                      Agenda
-                    </h2>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={loadAgenda}
-                    disabled={loading}
-                    className="w-9 h-9 rounded-full border border-dourado-200/20 flex items-center justify-center text-dourado-200/60 disabled:opacity-40"
-                    aria-label="Atualizar agenda"
-                  >
-                    <RefreshCw
-                      className={`w-4 h-4 ${
-                        loading ? 'animate-spin' : ''
-                      }`}
-                      strokeWidth={1.4}
-                    />
-                  </button>
-                </div>
+              <section className="mt-8">
+                <SectionTitle
+                  title="Agenda"
+                  onRefresh={
+                    loadAgenda
+                  }
+                  loading={
+                    loading
+                  }
+                />
 
                 <div className="rounded-2xl border border-dourado-200/20 bg-bordo-200/45 p-4">
                   <div className="flex items-center gap-3">
                     <button
                       type="button"
                       onClick={() =>
-                        changeAgendaDay(-1)
+                        changeAgendaDay(
+                          -1
+                        )
                       }
-                      className="w-10 h-10 shrink-0 rounded-full border border-dourado-200/20 flex items-center justify-center text-dourado-200/65"
-                      aria-label="Dia anterior"
+                      className="flex h-10 w-10 items-center justify-center rounded-full border border-dourado-200/20 text-dourado-200/65"
                     >
-                      <ChevronLeft className="w-4 h-4" />
+                      <ChevronLeft className="h-4 w-4" />
                     </button>
 
                     <input
                       type="date"
-                      value={agendaDate}
-                      onChange={(event) =>
+                      value={
+                        agendaDate
+                      }
+                      onChange={(
+                        event
+                      ) =>
                         setAgendaDate(
-                          event.target.value
+                          event
+                            .target
+                            .value
                         )
                       }
                       className="AdminInput flex-1 text-center"
@@ -1979,41 +2062,49 @@ export function AdminPanel() {
                     <button
                       type="button"
                       onClick={() =>
-                        changeAgendaDay(1)
+                        changeAgendaDay(
+                          1
+                        )
                       }
-                      className="w-10 h-10 shrink-0 rounded-full border border-dourado-200/20 flex items-center justify-center text-dourado-200/65"
-                      aria-label="Próximo dia"
+                      className="flex h-10 w-10 items-center justify-center rounded-full border border-dourado-200/20 text-dourado-200/65"
                     >
-                      <ChevronRight className="w-4 h-4" />
+                      <ChevronRight className="h-4 w-4" />
                     </button>
                   </div>
 
                   <p className="mt-3 text-center font-serif text-xs text-creme/45">
-                    {formatAgendaDate(agendaDate)}
+                    {formatAgendaDate(
+                      agendaDate
+                    )}
                   </p>
                 </div>
 
-                <section className="mt-5 rounded-2xl border border-dourado-200/20 bg-bordo-200/35 overflow-hidden">
+                <div className="mt-5 overflow-hidden rounded-2xl border border-dourado-200/20 bg-bordo-200/35">
                   <button
                     type="button"
                     onClick={() =>
                       setShowAvailabilitySettings(
-                        (current) => !current
+                        (
+                          current
+                        ) =>
+                          !current
                       )
                     }
-                    className="w-full flex items-center justify-between gap-4 p-5 text-left"
+                    className="flex w-full items-center justify-between p-5 text-left"
                   >
                     <div>
-                      <p className="font-serif text-[10px] tracking-[0.18em] text-dourado-200/50 uppercase">
-                        Horários de atendimento
+                      <p className="font-serif text-[10px] uppercase tracking-[0.18em] text-dourado-200/50">
+                        Horários de
+                        atendimento
                       </p>
 
                       <p className="mt-1 font-serif text-sm text-creme/75">
-                        Configurar semana
+                        Configurar
+                        semana
                       </p>
                     </div>
 
-                    <span className="font-serif text-lg text-dourado-200/55">
+                    <span className="text-dourado-200/55">
                       {showAvailabilitySettings
                         ? '−'
                         : '+'}
@@ -2021,494 +2112,373 @@ export function AdminPanel() {
                   </button>
 
                   {showAvailabilitySettings && (
-                    <div className="border-t border-dourado-200/10 px-4 pb-4">
-                      <p className="py-4 font-serif text-[11px] leading-relaxed text-creme/35">
-                        Ative os dias em que você
-                        atende e defina o horário de
-                        início e fim. As alterações
-                        afetam os horários disponíveis
-                        para clientes.
-                      </p>
-
-                      <div className="space-y-3">
-                        {[1, 2, 3, 4, 5, 6, 0].map(
-                          (dayOfWeek) => {
-                            const day =
-                              availabilityDays.find(
-                                (item) =>
-                                  item.day_of_week ===
-                                  dayOfWeek
-                              );
-
-                            if (!day) return null;
-
-                            const saving =
-                              savingAvailabilityDay ===
-                              dayOfWeek;
-
-                            return (
-                              <div
-                                key={day.id}
-                                className="rounded-xl border border-dourado-200/15 bg-bordo-300/30 p-4"
-                              >
-                                <div className="flex items-center justify-between gap-3">
-                                  <div>
-                                    <p className="font-serif text-sm text-creme/80">
-                                      {getWeekdayName(
-                                        day.day_of_week
-                                      )}
-                                    </p>
-
-                                    <p className="mt-1 font-serif text-[10px] text-creme/35">
-                                      {day.active
-                                        ? 'Aberto para agendamentos'
-                                        : 'Fechado'}
-                                    </p>
-                                  </div>
-
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      updateAvailabilityLocal(
-                                        day.day_of_week,
-                                        {
-                                          active:
-                                            !day.active,
-                                        }
-                                      )
-                                    }
-                                    className={`relative w-11 h-6 rounded-full border transition ${
-                                      day.active
-                                        ? 'bg-dourado-200/20 border-dourado-200/50'
-                                        : 'bg-bordo-300 border-creme/15'
-                                    }`}
-                                    aria-label={`${
-                                      day.active
-                                        ? 'Desativar'
-                                        : 'Ativar'
-                                    } ${getWeekdayName(
-                                      day.day_of_week
-                                    )}`}
-                                  >
-                                    <span
-                                      className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full transition-all ${
-                                        day.active
-                                          ? 'left-6 bg-dourado-200'
-                                          : 'left-1 bg-creme/30'
-                                      }`}
-                                    />
-                                  </button>
-                                </div>
-
-                                {day.active && (
-                                  <div className="grid grid-cols-2 gap-3 mt-4">
-                                    <FieldLabel label="Início">
-                                      <input
-                                        type="time"
-                                        step="1800"
-                                        value={trimDatabaseTime(
-                                          day.start_time
-                                        )}
-                                        onChange={(
-                                          event
-                                        ) =>
-                                          updateAvailabilityLocal(
-                                            day.day_of_week,
-                                            {
-                                              start_time:
-                                                event
-                                                  .target
-                                                  .value,
-                                            }
-                                          )
-                                        }
-                                        className="AdminInput"
-                                      />
-                                    </FieldLabel>
-
-                                    <FieldLabel label="Fim">
-                                      <input
-                                        type="time"
-                                        step="1800"
-                                        value={trimDatabaseTime(
-                                          day.end_time
-                                        )}
-                                        onChange={(
-                                          event
-                                        ) =>
-                                          updateAvailabilityLocal(
-                                            day.day_of_week,
-                                            {
-                                              end_time:
-                                                event
-                                                  .target
-                                                  .value,
-                                            }
-                                          )
-                                        }
-                                        className="AdminInput"
-                                      />
-                                    </FieldLabel>
-                                  </div>
+                    <div className="space-y-3 border-t border-dourado-200/10 p-4">
+                      {availabilityDays.map(
+                        (
+                          day
+                        ) => (
+                          <div
+                            key={
+                              day.id
+                            }
+                            className="rounded-xl border border-dourado-200/10 bg-bordo-300/25 p-3"
+                          >
+                            <div className="flex items-center justify-between gap-3">
+                              <span className="font-serif text-sm text-creme/75">
+                                {getWeekdayName(
+                                  day.day_of_week
                                 )}
+                              </span>
 
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    saveAvailabilityDay(
-                                      day
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  updateAvailabilityLocal(
+                                    day.day_of_week,
+                                    {
+                                      active:
+                                        !day.active,
+                                    }
+                                  )
+                                }
+                                className={`rounded-full border px-3 py-1 font-serif text-[10px] ${
+                                  day.active
+                                    ? 'border-dourado-200/30 text-dourado-200'
+                                    : 'border-creme/15 text-creme/35'
+                                }`}
+                              >
+                                {day.active
+                                  ? 'Ativo'
+                                  : 'Fechado'}
+                              </button>
+                            </div>
+
+                            {day.active && (
+                              <div className="mt-3 grid grid-cols-2 gap-2">
+                                <input
+                                  type="time"
+                                  value={trimDatabaseTime(
+                                    day.start_time
+                                  )}
+                                  onChange={(
+                                    event
+                                  ) =>
+                                    updateAvailabilityLocal(
+                                      day.day_of_week,
+                                      {
+                                        start_time:
+                                          event
+                                            .target
+                                            .value,
+                                      }
                                     )
                                   }
-                                  disabled={saving}
-                                  className="mt-4 w-full flex items-center justify-center gap-2 rounded-xl border border-dourado-200/20 px-4 py-3 font-serif text-[10px] text-dourado-200/70 disabled:opacity-40"
-                                >
-                                  {saving ? (
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                  ) : (
-                                    <>
-                                      <Save className="w-3.5 h-3.5" />
-                                      Salvar{' '}
-                                      {getWeekdayName(
-                                        day.day_of_week
-                                      )}
-                                    </>
+                                  className="AdminInput"
+                                />
+
+                                <input
+                                  type="time"
+                                  value={trimDatabaseTime(
+                                    day.end_time
                                   )}
-                                </button>
+                                  onChange={(
+                                    event
+                                  ) =>
+                                    updateAvailabilityLocal(
+                                      day.day_of_week,
+                                      {
+                                        end_time:
+                                          event
+                                            .target
+                                            .value,
+                                      }
+                                    )
+                                  }
+                                  className="AdminInput"
+                                />
                               </div>
-                            );
-                          }
-                        )}
-                      </div>
+                            )}
+
+                            <button
+                              type="button"
+                              disabled={
+                                savingAvailabilityDay ===
+                                day.day_of_week
+                              }
+                              onClick={() =>
+                                saveAvailabilityDay(
+                                  day
+                                )
+                              }
+                              className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-dourado-200/20 py-2.5 font-serif text-[10px] text-dourado-200/70 disabled:opacity-40"
+                            >
+                              {savingAvailabilityDay ===
+                              day.day_of_week ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <Save className="h-3.5 w-3.5" />
+                              )}
+
+                              Salvar
+                            </button>
+                          </div>
+                        )
+                      )}
                     </div>
                   )}
-                </section>
+                </div>
 
-                <Messages
-                  error={error}
-                  success={success}
-                />
-
-                <section className="mt-6 rounded-2xl border border-dourado-200/20 bg-bordo-200/35 p-5">
-                  <p className="font-serif text-[10px] tracking-[0.18em] text-dourado-200/50 uppercase">
-                    Bloquear período
+                <div className="mt-5 rounded-2xl border border-dourado-200/20 bg-bordo-200/35 p-5">
+                  <p className="font-serif text-sm text-creme/80">
+                    Bloquear horário
                   </p>
 
-                  <p className="mt-2 font-serif text-xs leading-relaxed text-creme/40">
-                    Use para compromissos, clientes
-                    marcados fora do site ou qualquer
-                    período em que você não poderá
-                    atender.
-                  </p>
+                  <div className="mt-4 grid grid-cols-2 gap-3">
+                    <input
+                      type="time"
+                      value={
+                        agendaStartTime
+                      }
+                      onChange={(
+                        event
+                      ) =>
+                        setAgendaStartTime(
+                          event
+                            .target
+                            .value
+                        )
+                      }
+                      className="AdminInput"
+                    />
 
-                  <div className="grid grid-cols-2 gap-3 mt-5">
-                    <FieldLabel label="Início">
-                      <input
-                        type="time"
-                        step="1800"
-                        value={agendaStartTime}
-                        onChange={(event) =>
-                          setAgendaStartTime(
-                            event.target.value
-                          )
-                        }
-                        className="AdminInput"
-                      />
-                    </FieldLabel>
-
-                    <FieldLabel label="Fim">
-                      <input
-                        type="time"
-                        step="1800"
-                        value={agendaEndTime}
-                        onChange={(event) =>
-                          setAgendaEndTime(
-                            event.target.value
-                          )
-                        }
-                        className="AdminInput"
-                      />
-                    </FieldLabel>
+                    <input
+                      type="time"
+                      value={
+                        agendaEndTime
+                      }
+                      onChange={(
+                        event
+                      ) =>
+                        setAgendaEndTime(
+                          event
+                            .target
+                            .value
+                        )
+                      }
+                      className="AdminInput"
+                    />
                   </div>
 
-                  <div className="mt-4">
-                    <FieldLabel label="Motivo">
-                      <input
-                        type="text"
-                        value={agendaReason}
-                        onChange={(event) =>
-                          setAgendaReason(
-                            event.target.value
-                          )
-                        }
-                        placeholder="Ex: Cliente particular"
-                        className="AdminInput"
-                      />
-                    </FieldLabel>
-                  </div>
+                  <input
+                    type="text"
+                    value={
+                      agendaReason
+                    }
+                    onChange={(
+                      event
+                    ) =>
+                      setAgendaReason(
+                        event
+                          .target
+                          .value
+                      )
+                    }
+                    placeholder="Motivo (opcional)"
+                    className="AdminInput mt-3"
+                  />
 
                   <button
                     type="button"
-                    onClick={createScheduleBlock}
-                    disabled={savingBlock}
-                    className="mt-5 w-full flex items-center justify-center gap-2 rounded-xl border border-dourado-200/35 bg-dourado-200/10 px-4 py-3.5 font-serif text-xs text-dourado-200 disabled:opacity-40"
+                    disabled={
+                      savingBlock
+                    }
+                    onClick={
+                      createScheduleBlock
+                    }
+                    className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-dourado-200/30 bg-dourado-200/10 py-3 font-serif text-xs text-dourado-200 disabled:opacity-40"
                   >
                     {savingBlock ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
-                      <>
-                        <Clock3 className="w-4 h-4" />
-                        Bloquear horário
-                      </>
+                      <Plus className="h-4 w-4" />
                     )}
+
+                    Bloquear período
                   </button>
-                </section>
+                </div>
 
-                {loading && <Loading />}
-
-                {!loading && (
-                  <div className="mt-7">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-serif text-lg text-creme/85">
-                        Compromissos do dia
-                      </h3>
-
-                      <span className="font-serif text-[10px] text-creme/30">
-                        {appointments.length +
-                          scheduleBlocks.length}{' '}
-                        registro(s)
-                      </span>
-                    </div>
-
-                    {appointments.length === 0 &&
-                    scheduleBlocks.length === 0 ? (
-                      <div className="py-12 text-center">
-                        <CalendarDays
-                          className="w-7 h-7 mx-auto text-dourado-200/25"
-                          strokeWidth={1.3}
-                        />
-
-                        <p className="mt-4 font-serif text-sm text-creme/40">
-                          Nenhum compromisso neste dia.
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col gap-3 mt-5">
-                        {[
-                          ...appointments.map(
-                            (appointment) => ({
-                              kind:
-                                'appointment' as const,
-                              start:
-                                appointment.start_at,
-                              item: appointment,
-                            })
-                          ),
-                          ...scheduleBlocks.map(
-                            (block) => ({
-                              kind:
-                                'block' as const,
-                              start: block.start_at,
-                              item: block,
-                            })
-                          ),
-                        ]
-                          .sort(
-                            (a, b) =>
-                              new Date(
-                                a.start
-                              ).getTime() -
-                              new Date(
-                                b.start
-                              ).getTime()
-                          )
-                          .map((entry) => {
-                            if (
-                              entry.kind ===
-                              'appointment'
-                            ) {
-                              const appointment =
-                                entry.item;
-
-                              return (
-                                <article
-                                  key={`appointment-${appointment.id}`}
-                                  className="rounded-2xl border border-dourado-200/25 bg-dourado-200/5 p-4"
-                                >
-                                  <div className="flex items-start justify-between gap-4">
-                                    <div>
-                                      <p className="font-serif text-lg text-creme/90">
-                                        {formatAgendaTime(
-                                          appointment.start_at
-                                        )}{' '}
-                                        —{' '}
-                                        {formatAgendaTime(
-                                          appointment.end_at
-                                        )}
-                                      </p>
-
-                                      <p className="mt-1 font-serif text-[10px] text-dourado-200/55 uppercase">
-                                        Pedido #
-                                        {
-                                          appointment.order_id
-                                        }
-                                      </p>
-                                    </div>
-
-                                    <span className="rounded-full border border-dourado-200/20 px-2.5 py-1 font-serif text-[9px] text-dourado-200/70 uppercase">
-                                      {appointment.status ===
-                                      'reservado'
-                                        ? 'Aguardando'
-                                        : appointment.status ===
-                                            'confirmado'
-                                          ? 'Confirmado'
-                                          : appointment.status}
-                                    </span>
-                                  </div>
-
-                                  <p className="mt-3 font-serif text-xs text-creme/40">
-                                    Duração:{' '}
-                                    {formatDuration(
-                                      appointment.duration_minutes
-                                    )}
-                                  </p>
-                                </article>
-                              );
+                {loading ? (
+                  <Loading />
+                ) : (
+                  <div className="mt-5 space-y-3">
+                    {appointments.map(
+                      (
+                        appointment
+                      ) => (
+                        <div
+                          key={`appointment-${appointment.id}`}
+                          className="rounded-xl border border-dourado-200/15 bg-bordo-200/35 p-4"
+                        >
+                          <p className="font-serif text-sm text-creme/80">
+                            Atendimento
+                            • Pedido #
+                            {
+                              appointment.order_id
                             }
+                          </p>
 
-                            const block =
-                              entry.item;
-
-                            return (
-                              <article
-                                key={`block-${block.id}`}
-                                className="rounded-2xl border border-red-300/15 bg-bordo-200/45 p-4"
-                              >
-                                <div className="flex items-start justify-between gap-4">
-                                  <div>
-                                    <p className="font-serif text-lg text-creme/80">
-                                      {formatAgendaTime(
-                                        block.start_at
-                                      )}{' '}
-                                      —{' '}
-                                      {formatAgendaTime(
-                                        block.end_at
-                                      )}
-                                    </p>
-
-                                    <p className="mt-1 font-serif text-xs text-creme/45">
-                                      {block.reason ||
-                                        'Indisponível'}
-                                    </p>
-                                  </div>
-
-                                  <span className="rounded-full border border-red-300/15 px-2.5 py-1 font-serif text-[9px] text-red-300/60 uppercase">
-                                    Bloqueado
-                                  </span>
-                                </div>
-
-                                <button
-                                  type="button"
-                                  disabled={
-                                    actionId ===
-                                    block.id
-                                  }
-                                  onClick={() =>
-                                    deleteScheduleBlock(
-                                      block
-                                    )
-                                  }
-                                  className="mt-4 w-full rounded-xl border border-dourado-200/15 px-4 py-3 font-serif text-xs text-creme/55 disabled:opacity-40"
-                                >
-                                  Liberar horário
-                                </button>
-                              </article>
-                            );
-                          })}
-                      </div>
+                          <p className="mt-1 font-serif text-xs text-dourado-200/60">
+                            {formatAgendaTime(
+                              appointment.start_at
+                            )}{' '}
+                            –{' '}
+                            {formatAgendaTime(
+                              appointment.end_at
+                            )}{' '}
+                            •{' '}
+                            {formatDuration(
+                              appointment.duration_minutes
+                            )}
+                          </p>
+                        </div>
+                      )
                     )}
+
+                    {scheduleBlocks.map(
+                      (
+                        block
+                      ) => (
+                        <div
+                          key={`block-${block.id}`}
+                          className="rounded-xl border border-creme/10 bg-bordo-200/25 p-4"
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <div>
+                              <p className="font-serif text-sm text-creme/60">
+                                Bloqueado
+                                •{' '}
+                                {block.reason ||
+                                  'Indisponível'}
+                              </p>
+
+                              <p className="mt-1 font-serif text-xs text-creme/35">
+                                {formatAgendaTime(
+                                  block.start_at
+                                )}{' '}
+                                –{' '}
+                                {formatAgendaTime(
+                                  block.end_at
+                                )}
+                              </p>
+                            </div>
+
+                            <button
+                              type="button"
+                              disabled={
+                                actionId ===
+                                block.id
+                              }
+                              onClick={() =>
+                                deleteScheduleBlock(
+                                  block
+                                )
+                              }
+                              className="p-2 text-creme/35"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    )}
+
+                    {appointments.length ===
+                      0 &&
+                      scheduleBlocks.length ===
+                        0 && (
+                        <Empty text="Nenhum compromisso ou bloqueio neste dia." />
+                      )}
                   </div>
                 )}
-              </>
+              </section>
             )}
-
           </main>
         </div>
       </div>
 
-      {/* ============================
-          MODAL CRIAR / EDITAR JOGO
-      ============================ */}
-
       {serviceModalOpen && (
-        <div className="fixed inset-0 z-[150] bg-black/75 backdrop-blur-sm overflow-y-auto">
-          <div className="min-h-full flex items-end sm:items-center justify-center">
-            <div className="relative w-full max-w-[480px] bg-bordo-300 border border-dourado-200/20 rounded-t-[28px] sm:rounded-[28px] px-5 pt-6 pb-8">
-
-              {/* FECHAR */}
+        <div className="fixed inset-0 z-[150] overflow-y-auto bg-black/75 backdrop-blur-sm">
+          <div className="flex min-h-full items-end justify-center sm:items-center">
+            <div className="relative w-full max-w-[480px] rounded-t-[28px] border border-dourado-200/20 bg-bordo-300 px-5 pb-8 pt-6 sm:rounded-[28px]">
               <button
                 type="button"
-                onClick={closeServiceModal}
-                className="absolute right-5 top-5 w-9 h-9 rounded-full border border-dourado-200/20 flex items-center justify-center text-dourado-200/60"
+                onClick={
+                  closeServiceModal
+                }
+                className="absolute right-5 top-5 flex h-9 w-9 items-center justify-center rounded-full border border-dourado-200/20 text-dourado-200/60"
               >
-                <X
-                  className="w-4 h-4"
-                  strokeWidth={1.4}
-                />
+                <X className="h-4 w-4" />
               </button>
 
-              <div className="flex items-center justify-center gap-3 mb-5">
-                <div className="ornament-line w-10" />
-                <span className="text-dourado-200/40 text-xs">
-                  ✦
-                </span>
-                <div className="ornament-line w-10" />
-              </div>
-
               <div className="text-center">
-                <p className="font-serif text-[10px] tracking-[0.2em] text-dourado-200/45 uppercase">
-                  Painel administrativo
+                <p className="font-serif text-[10px] uppercase tracking-[0.2em] text-dourado-200/45">
+                  Painel
+                  administrativo
                 </p>
 
-                <h2 className="font-serif text-xl text-gradient-gold mt-2">
+                <h2 className="mt-2 font-serif text-xl text-gradient-gold">
                   {editingService
                     ? 'EDITAR JOGO'
                     : 'NOVO JOGO'}
                 </h2>
               </div>
 
-              <div className="space-y-4 mt-7">
-
-                {/* NOME */}
+              <div className="mt-7 space-y-4">
                 <FieldLabel label="Nome do jogo">
                   <input
                     type="text"
-                    value={serviceForm.nome}
-                    onChange={(event) =>
-                      setServiceForm({
-                        ...serviceForm,
-                        nome: event.target.value,
-                      })
+                    value={
+                      serviceForm.nome
+                    }
+                    onChange={(
+                      event
+                    ) =>
+                      setServiceForm(
+                        {
+                          ...serviceForm,
+                          nome:
+                            event
+                              .target
+                              .value,
+                        }
+                      )
                     }
                     placeholder="Ex: Cruz Celta"
                     className="AdminInput"
                   />
                 </FieldLabel>
 
-                {/* PREÇO + ORDEM */}
                 <div className="grid grid-cols-2 gap-3">
                   <FieldLabel label="Preço (R$)">
                     <input
                       type="text"
                       inputMode="decimal"
-                      value={serviceForm.preco}
-                      onChange={(event) =>
-                        setServiceForm({
-                          ...serviceForm,
-                          preco:
-                            event.target.value,
-                        })
+                      value={
+                        serviceForm.preco
                       }
-                      placeholder="30"
+                      onChange={(
+                        event
+                      ) =>
+                        setServiceForm(
+                          {
+                            ...serviceForm,
+                            preco:
+                              event
+                                .target
+                                .value,
+                          }
+                        )
+                      }
                       className="AdminInput"
                     />
                   </FieldLabel>
@@ -2517,162 +2487,179 @@ export function AdminPanel() {
                     <input
                       type="number"
                       min="1"
-                      value={serviceForm.ordem}
-                      onChange={(event) =>
-                        setServiceForm({
-                          ...serviceForm,
-                          ordem:
-                            event.target.value,
-                        })
+                      value={
+                        serviceForm.ordem
+                      }
+                      onChange={(
+                        event
+                      ) =>
+                        setServiceForm(
+                          {
+                            ...serviceForm,
+                            ordem:
+                              event
+                                .target
+                                .value,
+                          }
+                        )
                       }
                       className="AdminInput"
                     />
                   </FieldLabel>
                 </div>
 
-                {/* CATEGORIA */}
                 <FieldLabel label="Categoria">
                   <select
                     value={
                       serviceForm.categoria
                     }
-                    onChange={(event) =>
-                      setServiceForm({
-                        ...serviceForm,
-                        categoria:
-                          event.target.value as
-                            | 'consulta'
-                            | 'tiragem',
-                        area:
-                          event.target.value ===
-                          'consulta'
-                            ? 'geral'
-                            : serviceForm.area,
-                      })
+                    onChange={(
+                      event
+                    ) =>
+                      setServiceForm(
+                        {
+                          ...serviceForm,
+
+                          categoria:
+                            event
+                              .target
+                              .value as
+                              | 'consulta'
+                              | 'tiragem',
+
+                          area:
+                            event
+                              .target
+                              .value ===
+                            'consulta'
+                              ? 'geral'
+                              : serviceForm.area,
+                        }
+                      )
                     }
                     className="AdminInput"
                   >
-                    <option value="tiragem">
+                    <option
+                      value="tiragem"
                       className="bg-bordo-300 text-creme"
-                      >
+                    >
                       Tiragem
                     </option>
 
-                    <option value="consulta">
-                       className="bg-bordo-300 text-creme"
-                      >
+                    <option
+                      value="consulta"
+                      className="bg-bordo-300 text-creme"
+                    >
                       Consulta
                     </option>
                   </select>
                 </FieldLabel>
 
-                {/* ÁREA DA TIRAGEM */}
-                {serviceForm.categoria === 'tiragem' && (
+                {serviceForm.categoria ===
+                  'tiragem' && (
                   <FieldLabel label="Área da tiragem">
                     <select
-                      value={serviceForm.area}
-                      onChange={(event) =>
-                        setServiceForm({
-                          ...serviceForm,
-                          area:
-                            event.target.value as ServiceArea,
-                        })
+                      value={
+                        serviceForm.area
+                      }
+                      onChange={(
+                        event
+                      ) =>
+                        setServiceForm(
+                          {
+                            ...serviceForm,
+
+                            area:
+                              event
+                                .target
+                                .value as ServiceArea,
+                          }
+                        )
                       }
                       className="AdminInput"
                     >
-                     <option
-  value="geral"
-  className="bg-bordo-300 text-creme"
->
-  Geral
-</option>
-
-<option
-  value="amor"
-  className="bg-bordo-300 text-creme"
->
-  Amor
-</option>
-
-<option
-  value="financeiro"
-  className="bg-bordo-300 text-creme"
->
-  Financeiro
-</option>
-
-<option
-  value="pessoal"
-  className="bg-bordo-300 text-creme"
->
-  Pessoal
-</option>
-
-<option
-  value="espiritual"
-  className="bg-bordo-300 text-creme"
->
-  Espiritual
-</option>
-
-<option
-  value="relacionamentos"
-  className="bg-bordo-300 text-creme"
->
-  Relacionamentos
-</option>
+                      {areaOptions.map(
+                        (
+                          area
+                        ) => (
+                          <option
+                            key={
+                              area.value
+                            }
+                            value={
+                              area.value
+                            }
+                            className="bg-bordo-300 text-creme"
+                          >
+                            {
+                              area.label
+                            }
+                          </option>
+                        )
+                      )}
                     </select>
                   </FieldLabel>
                 )}
 
-                {/* DESCRIÇÃO */}
                 <FieldLabel label="Descrição">
                   <textarea
                     value={
                       serviceForm.descricao
                     }
-                    onChange={(event) =>
-                      setServiceForm({
-                        ...serviceForm,
-                        descricao:
-                          event.target.value,
-                      })
+                    onChange={(
+                      event
+                    ) =>
+                      setServiceForm(
+                        {
+                          ...serviceForm,
+
+                          descricao:
+                            event
+                              .target
+                              .value,
+                        }
+                      )
                     }
                     rows={5}
-                    placeholder="Descrição que aparecerá para a cliente..."
                     className="AdminInput resize-none py-3"
                   />
                 </FieldLabel>
 
-                {/* CONFIGURAÇÕES */}
-                <div className="rounded-xl border border-dourado-200/15 bg-bordo-200/30 divide-y divide-dourado-200/10">
-
-                  <ToggleRow
-                    label="Jogo ativo"
-                    description="Exibir este jogo no site"
-                    checked={serviceForm.ativo}
-                    onChange={(checked) =>
-                      setServiceForm({
+                <ToggleRow
+                  label="Jogo ativo"
+                  description="Exibir este jogo no site"
+                  checked={
+                    serviceForm.ativo
+                  }
+                  onChange={(
+                    ativo
+                  ) =>
+                    setServiceForm(
+                      {
                         ...serviceForm,
-                        ativo: checked,
-                      })
-                    }
-                  />
+                        ativo,
+                      }
+                    )
+                  }
+                />
 
-                  <ToggleRow
-                    label="Destacar"
-                    description="Marcar como destaque"
-                    checked={
-                      serviceForm.destaque
-                    }
-                    onChange={(checked) =>
-                      setServiceForm({
+                <ToggleRow
+                  label="Destacar"
+                  description="Marcar como destaque"
+                  checked={
+                    serviceForm.destaque
+                  }
+                  onChange={(
+                    destaque
+                  ) =>
+                    setServiceForm(
+                      {
                         ...serviceForm,
-                        destaque: checked,
-                      })
-                    }
-                  />
-                </div>
+                        destaque,
+                      }
+                    )
+                  }
+                />
               </div>
 
               {error && (
@@ -2681,21 +2668,23 @@ export function AdminPanel() {
                 </p>
               )}
 
-              {/* SALVAR */}
               <button
                 type="button"
-                onClick={saveService}
-                disabled={savingService}
-                className="mt-6 w-full flex items-center justify-center gap-2 rounded-full border border-dourado-200/45 bg-dourado-200/10 px-5 py-3.5 font-serif text-[11px] tracking-[0.15em] text-dourado-200 uppercase disabled:opacity-40"
+                onClick={
+                  saveService
+                }
+                disabled={
+                  savingService
+                }
+                className="mt-6 flex w-full items-center justify-center gap-2 rounded-full border border-dourado-200/45 bg-dourado-200/10 px-5 py-3.5 font-serif text-[11px] uppercase tracking-[0.15em] text-dourado-200 disabled:opacity-40"
               >
                 {savingService ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  <>
-                    <Save className="w-4 h-4" />
-                    Salvar jogo
-                  </>
+                  <Save className="h-4 w-4" />
                 )}
+
+                Salvar jogo
               </button>
             </div>
           </div>
@@ -2705,286 +2694,71 @@ export function AdminPanel() {
   );
 }
 
-/* =========================================================
-   COMPONENTES AUXILIARES
-========================================================= */
-
-function formatServiceArea(
-  area: ServiceArea
-) {
-  const labels: Record<ServiceArea, string> = {
-    geral: 'Geral',
-    amor: 'Amor',
-    financeiro: 'Financeiro',
-    pessoal: 'Pessoal',
-    espiritual: 'Espiritual',
-    relacionamentos: 'Relacionamentos',
-  };
-
-  return labels[area] ?? 'Geral';
-}
-
-function getWeekdayName(
-  dayOfWeek: number
-) {
-  const names: Record<number, string> = {
-    0: 'Domingo',
-    1: 'Segunda',
-    2: 'Terça',
-    3: 'Quarta',
-    4: 'Quinta',
-    5: 'Sexta',
-    6: 'Sábado',
-  };
-
-  return names[dayOfWeek] ?? 'Dia';
-}
-
-function trimDatabaseTime(value: string) {
-  return value?.slice(0, 5) ?? '';
-}
-
-function normalizeTimeForDatabase(
-  value: string
-) {
-  if (value.length === 5) {
-    return `${value}:00`;
-  }
-
-  return value;
-}
-
-function getTodayInSaoPaulo() {
-  const parts = new Intl.DateTimeFormat(
-    'en-CA',
-    {
-      timeZone: 'America/Sao_Paulo',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    }
-  ).formatToParts(new Date());
-
-  const year = parts.find(
-    (part) => part.type === 'year'
-  )?.value;
-
-  const month = parts.find(
-    (part) => part.type === 'month'
-  )?.value;
-
-  const day = parts.find(
-    (part) => part.type === 'day'
-  )?.value;
-
-  return `${year}-${month}-${day}`;
-}
-
-function addDaysToDateString(
-  value: string,
-  days: number
-) {
-  const [year, month, day] = value
-    .split('-')
-    .map(Number);
-
-  const date = new Date(
-    Date.UTC(year, month - 1, day)
-  );
-
-  date.setUTCDate(date.getUTCDate() + days);
-
-  return date.toISOString().slice(0, 10);
-}
-
-function saoPauloLocalToIso(
-  date: string,
-  time: string
-) {
-  /*
-    São Paulo atualmente usa UTC-03:00.
-    O projeto já trabalha com America/Sao_Paulo
-    para exibição e agendamento.
-  */
-  return new Date(
-    `${date}T${time}:00-03:00`
-  ).toISOString();
-}
-
-function getSaoPauloDayRange(date: string) {
-  return {
-    startIso: saoPauloLocalToIso(
-      date,
-      '00:00'
-    ),
-    endIso: saoPauloLocalToIso(
-      addDaysToDateString(date, 1),
-      '00:00'
-    ),
-  };
-}
-
-function formatAgendaDate(value: string) {
-  const [year, month, day] = value
-    .split('-')
-    .map(Number);
-
-  return new Intl.DateTimeFormat(
-    'pt-BR',
-    {
-      weekday: 'long',
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric',
-      timeZone: 'UTC',
-    }
-  ).format(
-    new Date(
-      Date.UTC(year, month - 1, day)
-    )
-  );
-}
-
-function formatAgendaTime(value: string) {
-  return new Date(value).toLocaleTimeString(
-    'pt-BR',
-    {
-      timeZone: 'America/Sao_Paulo',
-      hour: '2-digit',
-      minute: '2-digit',
-    }
-  );
-}
-
-function formatOrderDate(value: string | null) {
-  if (!value) return '—';
-
-  return new Date(value).toLocaleDateString(
-    'pt-BR',
-    {
-      timeZone: 'America/Sao_Paulo',
-    }
-  );
-}
-
-function formatOrderTime(value: string | null) {
-  if (!value) return '—';
-
-  return new Date(value).toLocaleTimeString(
-    'pt-BR',
-    {
-      timeZone: 'America/Sao_Paulo',
-      hour: '2-digit',
-      minute: '2-digit',
-    }
-  );
-}
-
-function formatDuration(
-  minutes: number | null
-) {
-  if (!minutes) return '—';
-
-  const hours = Math.floor(minutes / 60);
-  const rest = minutes % 60;
-
-  if (hours > 0 && rest > 0) {
-    return `${hours}h ${rest}min`;
-  }
-
-  if (hours > 0) {
-    return `${hours}h`;
-  }
-
-  return `${rest} min`;
-}
-
-function OrderStatus({
-  status,
-  paymentStatus,
-}: {
-  status: Order['status'];
-  paymentStatus: Order['payment_status'];
-}) {
-  if (status === 'cancelado') {
-    return (
-      <span className="rounded-full border border-red-300/20 bg-red-300/5 px-3 py-1.5 font-serif text-[9px] text-red-300/70 uppercase">
-        Cancelado
-      </span>
-    );
-  }
-
-  if (paymentStatus === 'pago') {
-    return (
-      <span className="rounded-full border border-dourado-200/30 bg-dourado-200/10 px-3 py-1.5 font-serif text-[9px] text-dourado-200 uppercase">
-        Pago ✓
-      </span>
-    );
-  }
-
-  return (
-    <span className="rounded-full border border-dourado-200/15 px-3 py-1.5 font-serif text-[9px] text-creme/45 uppercase">
-      Aguardando
-    </span>
-  );
-}
-
-function Loading() {
-  return (
-    <div className="py-16 flex justify-center">
-      <Loader2
-        className="w-6 h-6 text-dourado-200/60 animate-spin"
-        strokeWidth={1.4}
-      />
-    </div>
-  );
-}
-
-function Messages({
-  error,
-  success,
-}: {
-  error: string;
-  success: string;
-}) {
-  return (
-    <>
-      {error && (
-        <p className="mt-5 font-serif text-xs text-red-300/80 text-center">
-          {error}
-        </p>
-      )}
-
-      {success && (
-        <p className="mt-5 font-serif text-xs text-dourado-200/70 text-center">
-          {success}
-        </p>
-      )}
-    </>
-  );
-}
-
-function FilterButton({
-  children,
+function TabButton({
   active,
   onClick,
+  icon,
+  children,
 }: {
-  children: React.ReactNode;
   active: boolean;
   onClick: () => void;
+  icon: ReactNode;
+  children: ReactNode;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-full border px-2 py-2.5 font-serif text-[10px] transition ${
+      className={`rounded-xl border py-3 font-serif text-[10px] ${
         active
           ? 'border-dourado-200/45 bg-dourado-200/10 text-dourado-200'
           : 'border-dourado-200/15 text-creme/40'
       }`}
     >
-      {children}
+      <span className="flex items-center justify-center gap-1">
+        {icon}
+        {children}
+      </span>
     </button>
+  );
+}
+
+function SectionTitle({
+  title,
+  onRefresh,
+  loading,
+}: {
+  title: string;
+  onRefresh: () => void;
+  loading: boolean;
+}) {
+  return (
+    <div className="mb-5 flex items-end justify-between">
+      <div>
+        <p className="font-serif text-[10px] uppercase tracking-[0.22em] text-dourado-200/45">
+          Gerenciamento
+        </p>
+
+        <h2 className="mt-1 font-serif text-2xl text-creme/90">
+          {title}
+        </h2>
+      </div>
+
+      <button
+        type="button"
+        onClick={onRefresh}
+        disabled={loading}
+        className="flex h-9 w-9 items-center justify-center rounded-full border border-dourado-200/20 text-dourado-200/60 disabled:opacity-40"
+      >
+        <RefreshCw
+          className={`h-4 w-4 ${
+            loading
+              ? 'animate-spin'
+              : ''
+          }`}
+        />
+      </button>
+    </div>
   );
 }
 
@@ -2993,7 +2767,7 @@ function ActionButton({
   onClick,
   disabled,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
   onClick: () => void;
   disabled: boolean;
 }) {
@@ -3002,7 +2776,7 @@ function ActionButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="flex items-center justify-center gap-2 rounded-xl border border-dourado-200/25 bg-dourado-200/5 px-3 py-3 font-serif text-xs text-dourado-200/80 disabled:opacity-40"
+      className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-dourado-200/25 bg-dourado-200/5 px-3 py-3 font-serif text-xs text-dourado-200/80 disabled:opacity-40"
     >
       {children}
     </button>
@@ -3014,11 +2788,11 @@ function FieldLabel({
   children,
 }: {
   label: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <label className="block">
-      <span className="block mb-2 font-serif text-[10px] tracking-[0.15em] text-dourado-200/55 uppercase">
+      <span className="mb-2 block font-serif text-[10px] uppercase tracking-[0.15em] text-dourado-200/55">
         {label}
       </span>
 
@@ -3036,33 +2810,37 @@ function ToggleRow({
   label: string;
   description: string;
   checked: boolean;
-  onChange: (checked: boolean) => void;
+  onChange: (
+    checked: boolean
+  ) => void;
 }) {
   return (
     <button
       type="button"
-      onClick={() => onChange(!checked)}
-      className="w-full flex items-center justify-between gap-4 px-4 py-4 text-left"
+      onClick={() =>
+        onChange(!checked)
+      }
+      className="flex w-full items-center justify-between gap-4 rounded-xl border border-dourado-200/15 bg-bordo-200/30 px-4 py-4 text-left"
     >
       <div>
         <p className="font-serif text-sm text-creme/80">
           {label}
         </p>
 
-        <p className="font-serif text-[10px] text-creme/35 mt-1">
+        <p className="mt-1 font-serif text-[10px] text-creme/35">
           {description}
         </p>
       </div>
 
       <div
-        className={`relative w-11 h-6 rounded-full border transition ${
+        className={`relative h-6 w-11 rounded-full border ${
           checked
-            ? 'bg-dourado-200/20 border-dourado-200/50'
-            : 'bg-bordo-300 border-creme/15'
+            ? 'border-dourado-200/50 bg-dourado-200/20'
+            : 'border-creme/15 bg-bordo-300'
         }`}
       >
         <div
-          className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full transition-all ${
+          className={`absolute top-1/2 h-4 w-4 -translate-y-1/2 rounded-full ${
             checked
               ? 'left-6 bg-dourado-200'
               : 'left-1 bg-creme/30'
@@ -3071,4 +2849,351 @@ function ToggleRow({
       </div>
     </button>
   );
+}
+
+function Loading() {
+  return (
+    <div className="flex justify-center py-16">
+      <Loader2 className="h-6 w-6 animate-spin text-dourado-200/60" />
+    </div>
+  );
+}
+
+function Empty({
+  text,
+}: {
+  text: string;
+}) {
+  return (
+    <div className="py-12 text-center">
+      <Clock3 className="mx-auto h-6 w-6 text-dourado-200/30" />
+
+      <p className="mt-3 font-serif text-sm text-creme/45">
+        {text}
+      </p>
+    </div>
+  );
+}
+
+function Messages({
+  error,
+  success,
+}: {
+  error: string;
+  success: string;
+}) {
+  return (
+    <>
+      {error && (
+        <p className="mt-5 text-center font-serif text-xs text-red-300/80">
+          {error}
+        </p>
+      )}
+
+      {success && (
+        <p className="mt-5 text-center font-serif text-xs text-dourado-200/70">
+          {success}
+        </p>
+      )}
+    </>
+  );
+}
+
+function OrderStatus({
+  status,
+  paymentStatus,
+}: {
+  status: Order['status'];
+  paymentStatus:
+    Order['payment_status'];
+}) {
+  if (
+    status === 'cancelado'
+  ) {
+    return (
+      <span className="rounded-full border border-red-300/20 px-3 py-1.5 font-serif text-[9px] uppercase text-red-300/70">
+        Cancelado
+      </span>
+    );
+  }
+
+  if (
+    paymentStatus === 'pago'
+  ) {
+    return (
+      <span className="rounded-full border border-dourado-200/30 bg-dourado-200/10 px-3 py-1.5 font-serif text-[9px] uppercase text-dourado-200">
+        Pago ✓
+      </span>
+    );
+  }
+
+  return (
+    <span className="rounded-full border border-dourado-200/15 px-3 py-1.5 font-serif text-[9px] uppercase text-creme/45">
+      Aguardando
+    </span>
+  );
+}
+
+function formatServiceArea(
+  area: ServiceArea | null
+) {
+  return (
+    areaOptions.find(
+      (item) =>
+        item.value ===
+        (area ?? 'geral')
+    )?.label ?? 'Geral'
+  );
+}
+
+function formatMoney(
+  value: number
+) {
+  return Number(
+    value
+  ).toLocaleString(
+    'pt-BR',
+    {
+      style: 'currency',
+      currency: 'BRL',
+    }
+  );
+}
+
+function getWeekdayName(
+  day: number
+) {
+  return (
+    [
+      'Domingo',
+      'Segunda',
+      'Terça',
+      'Quarta',
+      'Quinta',
+      'Sexta',
+      'Sábado',
+    ][day] ?? 'Dia'
+  );
+}
+
+function trimDatabaseTime(
+  value: string
+) {
+  return (
+    value?.slice(0, 5) ??
+    ''
+  );
+}
+
+function normalizeTimeForDatabase(
+  value: string
+) {
+  return value.length === 5
+    ? `${value}:00`
+    : value;
+}
+
+function getTodayInSaoPaulo() {
+  const parts =
+    new Intl.DateTimeFormat(
+      'en-CA',
+      {
+        timeZone:
+          'America/Sao_Paulo',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }
+    ).formatToParts(
+      new Date()
+    );
+
+  const year =
+    parts.find(
+      (part) =>
+        part.type === 'year'
+    )?.value;
+
+  const month =
+    parts.find(
+      (part) =>
+        part.type === 'month'
+    )?.value;
+
+  const day =
+    parts.find(
+      (part) =>
+        part.type === 'day'
+    )?.value;
+
+  return `${year}-${month}-${day}`;
+}
+
+function addDaysToDateString(
+  value: string,
+  days: number
+) {
+  const [
+    year,
+    month,
+    day,
+  ] = value
+    .split('-')
+    .map(Number);
+
+  const date =
+    new Date(
+      Date.UTC(
+        year,
+        month - 1,
+        day
+      )
+    );
+
+  date.setUTCDate(
+    date.getUTCDate() +
+      days
+  );
+
+  return date
+    .toISOString()
+    .slice(0, 10);
+}
+
+function saoPauloLocalToIso(
+  date: string,
+  time: string
+) {
+  return new Date(
+    `${date}T${time}:00-03:00`
+  ).toISOString();
+}
+
+function getSaoPauloDayRange(
+  date: string
+) {
+  return {
+    startIso:
+      saoPauloLocalToIso(
+        date,
+        '00:00'
+      ),
+
+    endIso:
+      saoPauloLocalToIso(
+        addDaysToDateString(
+          date,
+          1
+        ),
+        '00:00'
+      ),
+  };
+}
+
+function formatAgendaDate(
+  value: string
+) {
+  const [
+    year,
+    month,
+    day,
+  ] = value
+    .split('-')
+    .map(Number);
+
+  return new Intl.DateTimeFormat(
+    'pt-BR',
+    {
+      weekday: 'long',
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+      timeZone: 'UTC',
+    }
+  ).format(
+    new Date(
+      Date.UTC(
+        year,
+        month - 1,
+        day
+      )
+    )
+  );
+}
+
+function formatAgendaTime(
+  value: string
+) {
+  return new Date(
+    value
+  ).toLocaleTimeString(
+    'pt-BR',
+    {
+      timeZone:
+        'America/Sao_Paulo',
+      hour: '2-digit',
+      minute: '2-digit',
+    }
+  );
+}
+
+function formatOrderDate(
+  value: string | null
+) {
+  if (!value) return '—';
+
+  return new Date(
+    value
+  ).toLocaleDateString(
+    'pt-BR',
+    {
+      timeZone:
+        'America/Sao_Paulo',
+    }
+  );
+}
+
+function formatOrderTime(
+  value: string | null
+) {
+  if (!value) return '—';
+
+  return new Date(
+    value
+  ).toLocaleTimeString(
+    'pt-BR',
+    {
+      timeZone:
+        'America/Sao_Paulo',
+      hour: '2-digit',
+      minute: '2-digit',
+    }
+  );
+}
+
+function formatDuration(
+  minutes: number | null
+) {
+  if (!minutes) return '—';
+
+  const hours =
+    Math.floor(
+      minutes / 60
+    );
+
+  const rest =
+    minutes % 60;
+
+  if (
+    hours &&
+    rest
+  ) {
+    return `${hours}h ${rest}min`;
+  }
+
+  if (hours) {
+    return `${hours}h`;
+  }
+
+  return `${rest} min`;
 }
