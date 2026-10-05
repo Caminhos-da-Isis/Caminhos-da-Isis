@@ -46,8 +46,8 @@ export function Hero() {
       </div>
 
       <div className="relative z-10 flex flex-col items-center text-center">
-        <h1 className="font-serif text-4xl font-semibold tracking-[0.14em] text-gradient-gold text-shadow-gold animate-fade-in">
-          CAMINHOS DA ISIS
+        <h1 className="font-serif text-3xl font-semibold tracking-[0.14em] text-gradient-gold text-shadow-gold animate-fade-in">
+          CAMINHOS DE ISIS
         </h1>
 
         <p
@@ -70,7 +70,7 @@ export function Hero() {
           >
             <img
               src={cartomanteImg}
-              alt="Caminhos da Isis — Cartomante"
+              alt="Caminhos de Isis — Cartomante"
               className="w-full h-full object-cover"
               style={{ objectPosition: 'center' }}
               loading="eager"
@@ -98,7 +98,7 @@ export function Hero() {
           className="font-serif text-2xl font-semibold tracking-[0.12em] text-gradient-gold mt-1 animate-fade-in"
           style={{ animationDelay: '0.7s' }}
         >
-          CAMINHOS DA ISIS
+          CAMINHOS DE ISIS
         </h2>
 
         <p
