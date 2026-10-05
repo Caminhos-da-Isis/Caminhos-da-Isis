@@ -1,13 +1,27 @@
-import { MessageCircle, Moon, Instagram } from 'lucide-react';
-import { WHATSAPP_NUMBER } from '@/data/services';
+import {
+  MessageCircle,
+  Moon,
+  Instagram,
+} from 'lucide-react';
+
+import {
+  WHATSAPP_NUMBER,
+} from '@/data/services';
 
 export function Footer() {
   return (
-    <footer id="contato" className="relative px-5 py-14 bg-bordo-400 border-t border-dourado-200/15">
+    <footer
+      id="contato"
+      className="relative px-5 py-14 bg-bordo-400 border-t border-dourado-200/15"
+    >
       <div className="flex flex-col items-center text-center">
-        <Moon className="w-6 h-6 text-dourado-200/70 mb-3" strokeWidth={1.5} />
-        <h3 className="font-serif text-xl font-semibold tracking-[0.2em] text-gradient-gold">
-          ISLP TAROT
+        <Moon
+          className="w-6 h-6 text-dourado-200/70 mb-3"
+          strokeWidth={1.5}
+        />
+
+        <h3 className="font-serif text-xl font-semibold tracking-[0.16em] text-gradient-gold">
+          CAMINHOS DA ISIS
         </h3>
 
         <a
@@ -16,7 +30,11 @@ export function Footer() {
           rel="noopener noreferrer"
           className="flex items-center gap-2 mt-4 font-serif text-base text-creme/80 hover:text-dourado-200 transition-colors"
         >
-          <Instagram className="w-4 h-4" strokeWidth={1.5} />
+          <Instagram
+            className="w-4 h-4"
+            strokeWidth={1.5}
+          />
+
           @ISLP_TAROT
         </a>
 
@@ -26,7 +44,11 @@ export function Footer() {
           rel="noopener noreferrer"
           className="flex items-center gap-2 mt-3 font-serif text-sm text-creme/60 hover:text-dourado-200 transition-colors"
         >
-          <MessageCircle className="w-4 h-4" strokeWidth={1.5} />
+          <MessageCircle
+            className="w-4 h-4"
+            strokeWidth={1.5}
+          />
+
           Atendimento pelo WhatsApp
         </a>
 
