@@ -521,7 +521,7 @@ export function LoginModal() {
           <form onSubmit={handleLogin}>
             <ModalHeader
               title="ENTRAR"
-              description="Acesse sua conta na ISLP Tarot."
+              description="Acesse sua conta no Caminhos da Isis."
             />
 
             <div className="mt-8 space-y-4">
@@ -572,7 +572,7 @@ export function LoginModal() {
           <form onSubmit={handleRegister}>
             <ModalHeader
               title="CRIAR CONTA"
-              description="Crie sua conta para acompanhar seus atendimentos na ISLP Tarot."
+              description="Crie sua conta para acompanhar seus atendimentos no Caminhos da Isis."
             />
 
             <div className="mt-8 space-y-4">
