@@ -1659,7 +1659,7 @@ export function AdminPanel() {
             <div className="h-16 px-5 flex items-center justify-between">
               <div>
                 <p className="font-serif text-[10px] tracking-[0.22em] text-dourado-200/50 uppercase">
-                  ISLP Tarot
+                  Caminhos da Isis
                 </p>
 
                 <h1 className="font-serif text-lg tracking-[0.1em] text-gradient-gold">
