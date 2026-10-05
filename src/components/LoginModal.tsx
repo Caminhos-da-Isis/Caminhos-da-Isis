@@ -3,6 +3,7 @@ import {
   useEffect,
   useState,
 } from 'react';
+
 import {
   ArrowLeft,
   Eye,
@@ -13,6 +14,7 @@ import {
   UserRound,
   X,
 } from 'lucide-react';
+
 import { supabase } from '@/lib/supabase';
 
 type Screen = 'login' | 'register';
@@ -34,6 +36,7 @@ export function LoginModal() {
 
   const [showPassword, setShowPassword] =
     useState(false);
+
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState('');
 
@@ -521,7 +524,7 @@ export function LoginModal() {
           <form onSubmit={handleLogin}>
             <ModalHeader
               title="ENTRAR"
-              description="Acesse sua conta no Caminhos da Isis."
+              description="Acesse sua conta no Caminhos de Isis."
             />
 
             <div className="mt-8 space-y-4">
@@ -572,7 +575,7 @@ export function LoginModal() {
           <form onSubmit={handleRegister}>
             <ModalHeader
               title="CRIAR CONTA"
-              description="Crie sua conta para acompanhar seus atendimentos no Caminhos da Isis."
+              description="Crie sua conta para acompanhar seus atendimentos no Caminhos de Isis."
             />
 
             <div className="mt-8 space-y-4">
