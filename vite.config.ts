@@ -4,7 +4,7 @@ import { fileURLToPath, URL } from 'node:url';
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  base: '/islp-tarot/',
+  base: '/Caminhos-da-Isis/',
   plugins: [react()],
   resolve: {
     alias: {
