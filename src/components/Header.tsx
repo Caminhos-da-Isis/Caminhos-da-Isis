@@ -164,15 +164,15 @@ export function Header() {
           <button
             onClick={() => handleNav('inicio')}
             className="flex items-center gap-2"
-            aria-label="Caminhos da Isis — Início"
+            aria-label="Caminhos de Isis — Início"
           >
             <Moon
               className="w-5 h-5 text-dourado-200"
               strokeWidth={1.5}
             />
 
-            <span className="font-serif text-lg tracking-[0.12em] text-gradient-gold font-semibold">
-              CAMINHOS DA ISIS
+            <span className="font-serif text-[15px] sm:text-lg tracking-[0.1em] text-gradient-gold font-semibold">
+              CAMINHOS DE ISIS
             </span>
           </button>
 
