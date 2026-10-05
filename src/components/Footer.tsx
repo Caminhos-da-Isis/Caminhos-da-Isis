@@ -1,12 +1,5 @@
-import {
-  MessageCircle,
-  Moon,
-  Instagram,
-} from 'lucide-react';
-
-import {
-  WHATSAPP_NUMBER,
-} from '@/data/services';
+import { MessageCircle, Moon, Instagram } from 'lucide-react';
+import { WHATSAPP_NUMBER } from '@/data/services';
 
 export function Footer() {
   return (
@@ -21,7 +14,7 @@ export function Footer() {
         />
 
         <h3 className="font-serif text-xl font-semibold tracking-[0.16em] text-gradient-gold">
-          CAMINHOS DA ISIS
+          CAMINHOS DE ISIS
         </h3>
 
         <a
@@ -34,7 +27,6 @@ export function Footer() {
             className="w-4 h-4"
             strokeWidth={1.5}
           />
-
           @ISLP_TAROT
         </a>
 
@@ -48,7 +40,6 @@ export function Footer() {
             className="w-4 h-4"
             strokeWidth={1.5}
           />
-
           Atendimento pelo WhatsApp
         </a>
 
