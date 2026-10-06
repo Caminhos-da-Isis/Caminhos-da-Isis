@@ -48,6 +48,8 @@ type Service = {
   categoria: 'consulta' | 'tiragem';
   area: ServiceArea;
   imagem_url: string | null;
+  quantidade_cartas: number | null;
+  tem_carta_fundo: boolean;
   ativo: boolean;
   destaque: boolean;
   ordem: number;
@@ -61,6 +63,8 @@ type ServiceForm = {
   categoria: 'consulta' | 'tiragem';
   area: ServiceArea;
   imagem_url: string;
+  quantidade_cartas: string;
+  tem_carta_fundo: boolean;
   ativo: boolean;
   destaque: boolean;
   ordem: string;
@@ -148,6 +152,8 @@ const emptyServiceForm: ServiceForm = {
   categoria: 'tiragem',
   area: 'geral',
   imagem_url: '',
+  quantidade_cartas: '',
+  tem_carta_fundo: false,
   ativo: true,
   destaque: false,
   ordem: '1',
@@ -413,7 +419,7 @@ export function AdminPanel() {
       await supabase
         .from('services')
         .select(
-          'id, nome, preco, descricao, categoria, area, imagem_url, ativo, destaque, ordem, created_at'
+          'id, nome, preco, descricao, categoria, area, imagem_url, quantidade_cartas, tem_carta_fundo, ativo, destaque, ordem, created_at'
         )
         .order('categoria', {
           ascending: true,
@@ -479,6 +485,14 @@ export function AdminPanel() {
 
       imagem_url:
         service.imagem_url ?? '',
+
+      quantidade_cartas:
+        service.quantidade_cartas != null
+          ? String(service.quantidade_cartas)
+          : '',
+
+      tem_carta_fundo:
+        service.tem_carta_fundo ?? false,
 
       ativo:
         service.ativo,
@@ -629,6 +643,11 @@ export function AdminPanel() {
       serviceForm.ordem
     );
 
+    const quantidadeCartas =
+      serviceForm.quantidade_cartas.trim() === ''
+        ? null
+        : Number(serviceForm.quantidade_cartas);
+
     if (!nome) {
       setError(
         'Informe o nome do jogo.'
@@ -651,6 +670,18 @@ export function AdminPanel() {
     if (!descricao) {
       setError(
         'Informe a descrição do jogo.'
+      );
+
+      return;
+    }
+
+    if (
+      serviceForm.categoria === 'tiragem' &&
+      quantidadeCartas !== null &&
+      (!Number.isInteger(quantidadeCartas) || quantidadeCartas < 1)
+    ) {
+      setError(
+        'A quantidade de cartas precisa ser um número inteiro maior que zero.'
       );
 
       return;
@@ -710,6 +741,16 @@ export function AdminPanel() {
 
       imagem_url:
         savedImage || null,
+
+      quantidade_cartas:
+        serviceForm.categoria === 'tiragem'
+          ? quantidadeCartas
+          : null,
+
+      tem_carta_fundo:
+        serviceForm.categoria === 'tiragem' && quantidadeCartas !== null
+          ? serviceForm.tem_carta_fundo
+          : false,
 
       ativo:
         serviceForm.ativo,
@@ -3467,13 +3508,13 @@ export function AdminPanel() {
                             : serviceForm.area,
                       })
                     }
-                    className="AdminInput"
+                    className="AdminInput bg-bordo-300 text-creme"
                   >
-                    <option value="tiragem">
+                    <option className="bg-bordo-300 text-creme" value="tiragem">
                       Tiragem
                     </option>
 
-                    <option value="consulta">
+                    <option className="bg-bordo-300 text-creme" value="consulta">
                       Consulta
                     </option>
                   </select>
@@ -3498,33 +3539,83 @@ export function AdminPanel() {
                             event.target.value as ServiceArea,
                         })
                       }
-                      className="AdminInput"
+                      className="AdminInput bg-bordo-300 text-creme"
                     >
-                      <option value="geral">
+                      <option className="bg-bordo-300 text-creme" value="geral">
                         Geral
                       </option>
 
-                      <option value="amor">
+                      <option className="bg-bordo-300 text-creme" value="amor">
                         Amor
                       </option>
 
-                      <option value="financeiro">
+                      <option className="bg-bordo-300 text-creme" value="financeiro">
                         Financeiro
                       </option>
 
-                      <option value="pessoal">
+                      <option className="bg-bordo-300 text-creme" value="pessoal">
                         Pessoal
                       </option>
 
-                      <option value="espiritual">
+                      <option className="bg-bordo-300 text-creme" value="espiritual">
                         Espiritual
                       </option>
 
-                      <option value="relacionamentos">
+                      <option className="bg-bordo-300 text-creme" value="relacionamentos">
                         Relacionamentos
                       </option>
                     </select>
                   </FieldLabel>
+                )}
+
+                {/* ==================================
+                    CARTAS DA TIRAGEM
+                ================================== */}
+
+                {serviceForm.categoria ===
+                  'tiragem' && (
+                  <div className="rounded-xl border border-dourado-200/15 bg-bordo-200/30 p-4 space-y-4">
+                    <FieldLabel label="Quantidade de cartas">
+                      <input
+                        type="number"
+                        min="1"
+                        inputMode="numeric"
+                        value={serviceForm.quantidade_cartas}
+                        onChange={(event) =>
+                          setServiceForm({
+                            ...serviceForm,
+                            quantidade_cartas: event.target.value,
+                            tem_carta_fundo: event.target.value.trim()
+                              ? serviceForm.tem_carta_fundo
+                              : false,
+                          })
+                        }
+                        placeholder="Deixe vazio para não exibir"
+                        className="AdminInput"
+                      />
+                    </FieldLabel>
+
+                    <ToggleRow
+                      label="Carta de fundo"
+                      description={
+                        serviceForm.quantidade_cartas.trim()
+                          ? 'Esta tiragem também possui carta de fundo'
+                          : 'Preencha a quantidade de cartas para habilitar'
+                      }
+                      checked={
+                        serviceForm.quantidade_cartas.trim()
+                          ? serviceForm.tem_carta_fundo
+                          : false
+                      }
+                      onChange={(checked) => {
+                        if (!serviceForm.quantidade_cartas.trim()) return;
+                        setServiceForm({
+                          ...serviceForm,
+                          tem_carta_fundo: checked,
+                        });
+                      }}
+                    />
+                  </div>
                 )}
 
                 {/* ==================================

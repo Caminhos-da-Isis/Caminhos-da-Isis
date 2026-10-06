@@ -8,6 +8,7 @@ import {
   Check,
   Eye,
   Heart,
+  Info,
   Loader2,
   MessageCircle,
   MoonStar,
@@ -57,6 +58,12 @@ type DatabaseService = {
   imagem_url:
     | string
     | null;
+
+  quantidade_cartas:
+    | number
+    | null;
+
+  tem_carta_fundo: boolean;
 
   ativo: boolean;
   destaque: boolean;
@@ -157,7 +164,7 @@ export function Tiragens() {
     } = await supabase
       .from('services')
       .select(
-        'id, nome, preco, descricao, categoria, area, imagem_url, ativo, destaque, ordem'
+        'id, nome, preco, descricao, categoria, area, imagem_url, quantidade_cartas, tem_carta_fundo, ativo, destaque, ordem'
       )
       .eq(
         'categoria',
@@ -419,6 +426,11 @@ function TiragemCard({
     setImageError,
   ] = useState(false);
 
+  const [
+    infoOpen,
+    setInfoOpen,
+  ] = useState(false);
+
   const area =
     databaseService.area ??
     'geral';
@@ -431,6 +443,10 @@ function TiragemCard({
       databaseService.imagem_url
     ) &&
     !imageError;
+
+  const hasCardInfo =
+    databaseService.quantidade_cartas != null &&
+    databaseService.quantidade_cartas > 0;
 
   function handleAddToCart() {
     addToCart({
@@ -528,6 +544,34 @@ function TiragemCard({
         <span className="absolute left-2.5 top-2.5 z-10 rounded-full border border-dourado-200/25 bg-bordo-400/80 px-2 py-1 font-serif text-[8px] uppercase tracking-[0.12em] text-dourado-200 backdrop-blur-sm shadow-[0_2px_10px_rgba(0,0,0,0.25)]">
           {formatArea(area)}
         </span>
+
+        {/* INFORMAÇÕES DAS CARTAS */}
+        {hasCardInfo && (
+          <div className={`absolute right-2.5 z-20 ${databaseService.destaque ? 'top-10' : 'top-2.5'}`}>
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                setInfoOpen((current) => !current);
+              }}
+              aria-label="Informações da tiragem"
+              aria-expanded={infoOpen}
+              className="flex h-6 w-6 items-center justify-center rounded-full border border-dourado-200/35 bg-bordo-400/90 text-dourado-200 backdrop-blur-sm shadow-[0_2px_10px_rgba(0,0,0,0.3)]"
+            >
+              <Info className="h-3.5 w-3.5" strokeWidth={1.8} />
+            </button>
+
+            {infoOpen && (
+              <div className="absolute right-0 top-8 w-[145px] rounded-xl border border-dourado-200/25 bg-bordo-400/95 px-3 py-2.5 text-left shadow-[0_10px_30px_rgba(0,0,0,0.4)] backdrop-blur-md">
+                <p className="font-serif text-[10px] leading-relaxed text-creme/80">
+                  {databaseService.quantidade_cartas}{' '}
+                  {databaseService.quantidade_cartas === 1 ? 'carta' : 'cartas'}
+                  {databaseService.tem_carta_fundo ? ' + 1 carta de fundo' : ''}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* DESTAQUE */}
         {databaseService.destaque && (
